@@ -1,0 +1,26 @@
+# Netlify build settings for Moofield (Next.js 16, App Router).
+#
+# Netlify detects Next.js and adds its OpenNext adapter (@netlify/plugin-nextjs) automatically,
+# so there is no [[plugins]] entry: pinning the plugin would opt out of Netlify's updates.
+
+[build]
+  # `npm run build` runs the read-only check, then `next build --webpack`.
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # The Node.js version this project is developed and tested on.
+  NODE_VERSION = "24.18.0"
+  # Don't set NODE_ENV here or in the Netlify UI: NODE_ENV=production makes Netlify skip
+  # devDependencies, and the build needs Tailwind, TypeScript and @next/swc-wasm-nodejs.
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Compiler note: the build always uses webpack (`--webpack`). On Netlify's Linux servers Next.js
+# loads its native SWC compiler (@next/swc-linux-x64-gnu, already in package-lock.json), so the
+# WebAssembly compiler (@next/swc-wasm-nodejs) is only the fallback there. The wasm workaround is
+# for the Windows dev machine, whose Application Control policy blocks the native Windows binary.
+
+# Scheduled Orbio refresh: netlify/functions/refresh-orbio.mjs calls /api/cron/scan.
+# Netlify only runs schedules on the published production deploy.
+[functions."refresh-orbio"]
+  schedule = "*/3 * * * *"

@@ -1,0 +1,82 @@
+{
+  "_note": "Recorded shapes from the real Orbio API (GET https://www.orbio.so/api/protocol/agents and /agents/{id}, 2026-10-03), trimmed to the fields Moofield reads. Field names are verbatim; names, tokens and wallets are test values. Agent 1: graduated (list and curve agree), with a test logo URL. Agent 2: list says graduated, curve disagrees (must be hidden). Agent 3: not graduated. Used by tests/api-routes.test.ts and the stub Orbio server in scripts/smoke-routes.mjs.",
+  "list": {
+    "source": "stored",
+    "live": true,
+    "chainId": 4663,
+    "page": { "limit": 200, "offset": 0, "total": 3 },
+    "data": [
+      {
+        "agentId": "1",
+        "token": "0x00000000000000000000000000000000000000a1",
+        "name": "Recorded Agent One",
+        "symbol": "REC1",
+        "logo": "https://example.com/orbio-test/rec1.png",
+        "decimals": 18,
+        "totalSupply": "1000000000000000000000000000",
+        "owner": "0x00000000000000000000000000000000000000b1",
+        "agentWallet": "0x00000000000000000000000000000000000000c1",
+        "receiver": "0xb3c4fec650ee602261570528a9c5c4b41c18db20",
+        "feeBps": 500,
+        "launchedAt": "1790477219",
+        "launchTx": "0xa6eaaf0b52fefc9afb885de21cd87540a1ae726a72c08ecc02fcb92ee22aa7e0",
+        "price": { "source": "pool", "graduated": true, "orbioPerToken": null, "priceMicroUsd": "479", "marketCapMicroUsd": "479928647265" },
+        "curve": null,
+        "stake": { "orbioWei": "0", "claimedFeesWei": "0", "protocolFeeWei": "0", "stakedWei": "0", "withdrawnWei": "0" },
+        "credit": { "owedAtoms": null, "claimedAtoms": "0", "activatedAtoms": "0", "mintedAtoms": null },
+        "links": { "token": "https://robin.etherscan.io/token/0x00000000000000000000000000000000000000a1" },
+        "socials": { "twitter": null, "telegram": null, "discord": null, "website": null, "farcaster": null },
+        "description": "Recorded test agent one"
+      },
+      {
+        "agentId": "2",
+        "token": "0x00000000000000000000000000000000000000a2",
+        "name": "Recorded Agent Two",
+        "symbol": "REC2",
+        "logo": null,
+        "decimals": 18,
+        "totalSupply": "1000000000000000000000000000",
+        "owner": "0x00000000000000000000000000000000000000b2",
+        "agentWallet": "0x00000000000000000000000000000000000000c2",
+        "receiver": "0xb3c4fec650ee602261570528a9c5c4b41c18db20",
+        "feeBps": 500,
+        "launchedAt": "1790390819",
+        "launchTx": "0xb6eaaf0b52fefc9afb885de21cd87540a1ae726a72c08ecc02fcb92ee22aa7e0",
+        "price": { "source": "pool", "graduated": true, "orbioPerToken": null, "priceMicroUsd": "120", "marketCapMicroUsd": "120000000000" },
+        "curve": null,
+        "stake": { "orbioWei": "0", "claimedFeesWei": "0", "protocolFeeWei": "0", "stakedWei": "0", "withdrawnWei": "0" },
+        "credit": { "owedAtoms": null, "claimedAtoms": "0", "activatedAtoms": "0", "mintedAtoms": null },
+        "links": { "token": "https://robin.etherscan.io/token/0x00000000000000000000000000000000000000a2" },
+        "socials": { "twitter": null, "telegram": null, "discord": null, "website": null, "farcaster": null },
+        "description": "Recorded test agent two"
+      },
+      {
+        "agentId": "3",
+        "token": "0x00000000000000000000000000000000000000a3",
+        "name": "Recorded Agent Three",
+        "symbol": "REC3",
+        "logo": null,
+        "decimals": 18,
+        "totalSupply": "1000000000000000000000000000",
+        "owner": "0x00000000000000000000000000000000000000b1",
+        "agentWallet": "0x00000000000000000000000000000000000000b1",
+        "receiver": "0xb3c4fec650ee602261570528a9c5c4b41c18db20",
+        "feeBps": 500,
+        "launchedAt": "1790304419",
+        "launchTx": "0xc6eaaf0b52fefc9afb885de21cd87540a1ae726a72c08ecc02fcb92ee22aa7e0",
+        "price": { "source": "curve", "graduated": false, "orbioPerToken": null, "priceMicroUsd": "3", "marketCapMicroUsd": "3000000000" },
+        "curve": null,
+        "stake": { "orbioWei": "0", "claimedFeesWei": "0", "protocolFeeWei": "0", "stakedWei": "0", "withdrawnWei": "0" },
+        "credit": { "owedAtoms": null, "claimedAtoms": "0", "activatedAtoms": "0", "mintedAtoms": null },
+        "links": { "token": "https://robin.etherscan.io/token/0x00000000000000000000000000000000000000a3" },
+        "socials": { "twitter": null, "telegram": null, "discord": null, "website": null, "farcaster": null },
+        "description": "Recorded test agent three"
+      }
+    ]
+  },
+  "curves": {
+    "1": { "address": "0x1b4461ffd80a29fd79764c05a7b84b32156f3cd8", "graduated": true, "quoteReserveWei": "1", "tokenReserveWei": "0", "graduationThresholdWei": "264112936947239365305859", "progressBps": 10000 },
+    "2": { "address": "0x2b4461ffd80a29fd79764c05a7b84b32156f3cd8", "graduated": false, "quoteReserveWei": "1", "tokenReserveWei": "0", "graduationThresholdWei": "264112936947239365305859", "progressBps": 9000 },
+    "3": { "address": "0x3b4461ffd80a29fd79764c05a7b84b32156f3cd8", "graduated": false, "quoteReserveWei": "1", "tokenReserveWei": "0", "graduationThresholdWei": "264112936947239365305859", "progressBps": 1200 }
+  }
+}

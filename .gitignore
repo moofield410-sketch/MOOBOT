@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+dist/
+next-env.d.ts
+*.tsbuildinfo
+
+# Environment files: never commit real keys. Only the template is tracked.
+.env*
+!.env.example
+
+# Hosting tools
+.netlify/
+.vercel
+
+# Old copies kept locally
+_old/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db

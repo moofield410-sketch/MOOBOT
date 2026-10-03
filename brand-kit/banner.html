@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@600;800&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; width: 1500px; height: 500px; overflow: hidden; }
+  .wrap { position: relative; width: 1500px; height: 500px; overflow: hidden; font-family: Nunito, sans-serif;
+    background: linear-gradient(180deg, #bfe3f5 0%, #e3f1e6 62%, #f7f3e3 100%); }
+  .sun { position: absolute; right: 120px; top: -120px; width: 520px; height: 520px; border-radius: 50%;
+    background: radial-gradient(circle, rgb(255 216 77 / .85), rgb(255 228 140 / .4) 45%, transparent 70%); }
+  .rows { position: absolute; left: -10%; right: -10%; bottom: 0; height: 160px; perspective: 380px; overflow: hidden; }
+  .rows::before { content: ""; position: absolute; inset: -120% 0 0 0; transform: rotateX(66deg); transform-origin: bottom;
+    background: repeating-linear-gradient(90deg, rgb(47 122 50 / .32) 0 18px, rgb(93 170 74 / .14) 18px 56px); }
+  .hill { position: absolute; left: -200px; right: 700px; bottom: -230px; height: 380px; border-radius: 50%; background: #5daa4a; opacity: .9; }
+  .text { position: absolute; left: 110px; top: 118px; }
+  h1 { margin: 0; font-family: Fredoka, sans-serif; font-weight: 700; font-size: 132px; line-height: 1; letter-spacing: -1px;
+    background: linear-gradient(135deg, #1f5a22, #2f7a32 45%, #5daa4a 75%, #c98a00); -webkit-background-clip: text; color: transparent; }
+  p { margin: 18px 0 0; font-size: 36px; font-weight: 800; color: #1e2a1c; }
+  .tag { display: inline-block; margin-top: 22px; padding: 10px 22px; border-radius: 999px; background: #2f7a32; color: #fff;
+    font-family: Fredoka, sans-serif; font-weight: 600; font-size: 26px; box-shadow: 0 5px 0 #1f5a22; }
+  img { position: absolute; right: 150px; top: 36px; width: 430px; height: 452px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="sun"></div>
+    <div class="rows"></div>
+    <div class="hill"></div>
+    <div class="text">
+      <h1>Moofield</h1>
+      <p>Every pitch needs a power-up.</p>
+      <span class="tag">$MOOBOT · The Tournament</span>
+    </div>
+    <img src="../public/moobot-assets/moobot-agent.svg" alt="" />
+  </div>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@600;800&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  .wrap { position: relative; width: 1200px; height: 630px; overflow: hidden; font-family: Nunito, sans-serif;
+    background: linear-gradient(180deg, #bfe3f5 0%, #e3f1e6 60%, #f7f3e3 100%); }
+  .sun { position: absolute; right: 60px; top: -60px; width: 560px; height: 560px; border-radius: 50%;
+    background: radial-gradient(circle, rgb(255 216 77 / .85), rgb(255 228 140 / .4) 45%, transparent 70%); }
+  .hill1 { position: absolute; left: -200px; right: -200px; bottom: -300px; height: 460px; border-radius: 50%; background: #5daa4a; }
+  .hill2 { position: absolute; left: -300px; right: 500px; bottom: -340px; height: 460px; border-radius: 50%; background: #2f7a32; }
+  .text { position: absolute; left: 80px; top: 150px; width: 620px; }
+  h1 { margin: 0; font-family: Fredoka, sans-serif; font-weight: 700; font-size: 120px; line-height: 1;
+    background: linear-gradient(135deg, #1f5a22, #2f7a32 45%, #5daa4a 75%, #c98a00); -webkit-background-clip: text; color: transparent; }
+  p { margin: 20px 0 0; font-size: 38px; font-weight: 800; color: #1e2a1c; line-height: 1.2; }
+  .sub { margin-top: 14px; font-size: 26px; font-weight: 600; color: #56634f; }
+  img { position: absolute; right: 90px; top: 70px; width: 470px; height: 494px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="sun"></div>
+    <div class="hill1"></div>
+    <div class="hill2"></div>
+    <div class="text">
+      <h1>Moofield</h1>
+      <p>Every pitch needs a power-up.</p>
+      <p class="sub">The Tournament for Orbio agents · $MOOBOT</p>
+    </div>
+    <img src="../public/moobot-assets/moobot-agent.svg" alt="" />
+  </div>
+</body>
+</html>

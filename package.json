@@ -1,0 +1,38 @@
+{
+  "name": "moofield",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "npm run check:readonly && next build --webpack",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import ./tests/setup/register.mjs --test \"tests/**/*.test.ts\"",
+    "test:routes": "npm run build && node scripts/smoke-routes.mjs",
+    "check:readonly": "node scripts/check-readonly.mjs",
+    "inspect:csv": "node scripts/inspect-csv.mjs"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.104.1",
+    "@wagmi/connectors": "^8.2.0",
+    "@wagmi/core": "^3.6.5",
+    "@walletconnect/ethereum-provider": "^2.25.0",
+    "next": "16.3.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "viem": "^2.57.2",
+    "wagmi": "^3.7.7"
+  },
+  "devDependencies": {
+    "@next/swc-wasm-nodejs": "16.3.8",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
+  }
+}

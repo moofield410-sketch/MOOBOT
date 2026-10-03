@@ -1,0 +1,54 @@
+{
+    "_note":  "Recorded from GET https://www.orbio.so/api/protocol/agents/0xeb2ecf641a1f04b8df37c24eabca8f5a47cfaacb on 2026-10-03 (agent 106, \u0027errand\u0027, row in data/orbio_agents.csv). Used as the stand-in $MOOBOT token in tests; never fetched live by tests.",
+    "agentId":  "106",
+    "token":  "0xeb2ecf641a1f04b8df37c24eabca8f5a47cfaacb",
+    "name":  "errand",
+    "symbol":  "ERRAND",
+    "decimals":  18,
+    "totalSupply":  "1000000000000000000000000000",
+    "owner":  "0xa7dea7ab4ab13f7f7a7da5db66102fb9ad53e131",
+    "agentWallet":  "0xa7dea7ab4ab13f7f7a7da5db66102fb9ad53e131",
+    "receiver":  "0xb3c4fec650ee602261570528a9c5c4b41c18db20",
+    "feeBps":  500,
+    "launchedAt":  "1790477219",
+    "launchTx":  "0xa6eaaf0b52fefc9afb885de21cd87540a1ae726a72c08ecc02fcb92ee22aa7e0",
+    "price":  {
+                  "source":  "pool",
+                  "graduated":  true,
+                  "orbioPerToken":  "5719869849946690",
+                  "priceMicroUsd":  "462",
+                  "marketCapMicroUsd":  "462430914657"
+              },
+    "curve":  {
+                  "address":  "0x1b4461ffd80a29fd79764c05a7b84b32156f3cd8",
+                  "graduated":  true,
+                  "quoteReserveWei":  "105645174778895746122343",
+                  "tokenReserveWei":  "0",
+                  "graduationThresholdWei":  "264112936947239365305859",
+                  "progressBps":  10000
+              },
+    "stake":  {
+                  "orbioWei":  "139790822133077349300826",
+                  "claimedFeesWei":  "279581644266154699522048",
+                  "protocolFeeWei":  "15002073566189268762624",
+                  "stakedWei":  "139790822133077349761024",
+                  "withdrawnWei":  "0"
+              },
+    "credit":  {
+                   "owedAtoms":  "15090306",
+                   "claimedAtoms":  "0",
+                   "activatedAtoms":  "0",
+                   "mintedAtoms":  "6057653192"
+               },
+    "converted":  {
+                      "orbioWei":  "124788748566888080998400",
+                      "usdgAtoms":  "5001773529",
+                      "pendingOrbioWei":  "0"
+                  },
+    "links":  {
+                  "token":  "https://robin.etherscan.io/token/0xeb2ecf641a1f04b8df37c24eabca8f5a47cfaacb",
+                  "owner":  "https://robin.etherscan.io/address/0xa7dea7ab4ab13f7f7a7da5db66102fb9ad53e131",
+                  "launchTx":  "https://robin.etherscan.io/tx/0xa6eaaf0b52fefc9afb885de21cd87540a1ae726a72c08ecc02fcb92ee22aa7e0"
+              },
+    "description":  "Agents hire agents. Compete for errands. A mission board paid in Orbio credit. Built on \n@orbiodotso"
+}
