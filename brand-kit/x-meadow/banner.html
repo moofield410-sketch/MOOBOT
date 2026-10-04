@@ -1,0 +1,110 @@
+<!doctype html>
+<!--
+  Moofield X header (banner), meadow theme (matches the website hero).
+  1500 x 500. The profile picture covers the bottom-left corner on X, and phones trim a little
+  off the top and bottom, so the words sit in the upper-left middle and nothing important goes low-left.
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; width: 1500px; height: 500px; overflow: hidden; }
+  .wrap { position: relative; width: 1500px; height: 500px; overflow: hidden; font-family: Nunito, sans-serif;
+    background: linear-gradient(180deg, #dcedf5 0%, #eaf2ea 52%, #f7f3e3 100%); }
+  svg.land { position: absolute; inset: 0; width: 1500px; height: 500px; }
+  .text { position: absolute; left: 132px; top: 50px; }
+  .chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px;
+    background: rgb(255 253 247 / .85); border: 1.5px solid rgb(30 42 28 / .12); color: #56634f;
+    font-weight: 700; font-size: 20px; letter-spacing: .2px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #5daa4a; box-shadow: 0 0 0 4px rgb(93 170 74 / .2); }
+  h1 { margin: 18px 0 0 -4px; font-family: Fredoka, sans-serif; font-weight: 700; font-size: 128px; line-height: 1;
+    letter-spacing: -3.5px; color: #1f5a22; }
+  p { margin: 10px 0 0; font-family: Fredoka, sans-serif; font-size: 40px; font-weight: 600; color: #1e2a1c; letter-spacing: -.3px; }
+  img.moo { position: absolute; left: 1010px; top: 66px; width: 360px; height: 378px; }
+  .bee, .crow { position: absolute; }
+  .bee { left: 862px; top: 112px; transform: rotate(-12deg); }
+  .crow { left: 1354px; top: 296px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <svg class="land" viewBox="0 0 1500 500" fill="none">
+      <!-- Sun behind MooBot: wash, thin gold ring, dotted outer ring -->
+      <circle cx="1190" cy="238" r="200" fill="#f2b705" fill-opacity=".1" />
+      <circle cx="1190" cy="238" r="200" stroke="#f2b705" stroke-opacity=".55" stroke-width="2" />
+      <circle cx="1190" cy="238" r="232" stroke="#f2b705" stroke-opacity=".28" stroke-width="1.6" stroke-dasharray="3 12" stroke-linecap="round" />
+
+      <!-- Bumble's pollen trail, looping in from the left -->
+      <path d="M566 360 C 600 300, 680 290, 740 250 S 830 190, 872 152" stroke="#f2b705" stroke-opacity=".75" stroke-width="3"
+        stroke-linecap="round" stroke-dasharray="2 11" />
+
+      <!-- Dandelion seeds -->
+      <g stroke="#56634f" stroke-opacity=".45" stroke-width="1.6" stroke-linecap="round">
+        <g transform="translate(700 92) scale(1.5) rotate(-10)"><path d="M0 0 V14" /><path d="M0 0 l0 -8" transform="rotate(-60)" /><path d="M0 0 l0 -8" transform="rotate(-30)" /><path d="M0 0 l0 -8" /><path d="M0 0 l0 -8" transform="rotate(30)" /><path d="M0 0 l0 -8" transform="rotate(60)" /></g>
+        <g transform="translate(1440 96) scale(1.25) rotate(12)"><path d="M0 0 V14" /><path d="M0 0 l0 -8" transform="rotate(-60)" /><path d="M0 0 l0 -8" transform="rotate(-30)" /><path d="M0 0 l0 -8" /><path d="M0 0 l0 -8" transform="rotate(30)" /><path d="M0 0 l0 -8" transform="rotate(60)" /></g>
+        <g transform="translate(960 340) scale(1.1) rotate(-20)"><path d="M0 0 V14" /><path d="M0 0 l0 -8" transform="rotate(-60)" /><path d="M0 0 l0 -8" transform="rotate(-30)" /><path d="M0 0 l0 -8" /><path d="M0 0 l0 -8" transform="rotate(30)" /><path d="M0 0 l0 -8" transform="rotate(60)" /></g>
+      </g>
+
+      <!-- Rolling hills, soft fills with thin outlines (like the footer waves) -->
+      <path d="M0 410 C 200 372, 380 380, 560 400 S 900 420, 1080 404 S 1380 380, 1500 396 V500 H0 Z" fill="#e3eedb" />
+      <path d="M0 410 C 200 372, 380 380, 560 400 S 900 420, 1080 404 S 1380 380, 1500 396" stroke="#2f7a32" stroke-opacity=".38" stroke-width="2" />
+      <path d="M0 456 C 260 426, 500 436, 760 448 S 1200 462, 1500 430 V500 H0 Z" fill="#d5e7cb" />
+      <path d="M0 456 C 260 426, 500 436, 760 448 S 1200 462, 1500 430" stroke="#2f7a32" stroke-opacity=".45" stroke-width="2" />
+
+      <!-- Crowley's fence post -->
+      <rect x="1393" y="364" width="14" height="44" rx="3" fill="#a07c52" stroke="#8a6a45" stroke-width="1.5" />
+      <path d="M1393 378 h14" stroke="#8a6a45" stroke-width="1.2" stroke-opacity=".6" />
+
+      <!-- Grass tufts and a few flowers -->
+      <g stroke="#2f7a32" stroke-opacity=".55" stroke-width="2" stroke-linecap="round">
+        <path d="M640 410 q -4 -16 -11 -21 M640 410 q 0 -19 3 -27 M640 410 q 6 -14 13 -18" />
+        <path d="M900 418 q -4 -16 -11 -21 M900 418 q 0 -19 3 -27 M900 418 q 6 -14 13 -18" />
+        <path d="M1440 410 q -4 -16 -11 -21 M1440 410 q 0 -19 3 -27 M1440 410 q 6 -14 13 -18" />
+      </g>
+      <g>
+        <path d="M770 414 q 3 -14 0 -28" stroke="#5daa4a" stroke-width="2" stroke-linecap="round" />
+        <g fill="#fffdf7" stroke="#e7d38a" stroke-width="1"><circle cx="764" cy="384" r="5" /><circle cx="776" cy="384" r="5" /><circle cx="770" cy="378" r="5" /><circle cx="770" cy="390" r="5" /></g>
+        <circle cx="770" cy="384" r="3.4" fill="#f2b705" />
+        <path d="M560 400 q -2 -12 1 -24" stroke="#5daa4a" stroke-width="2" stroke-linecap="round" />
+        <g fill="#f4b9c8" stroke="#e48aa3" stroke-width="1"><circle cx="555" cy="374" r="4.4" /><circle cx="566" cy="374" r="4.4" /><circle cx="561" cy="369" r="4.4" /><circle cx="561" cy="379" r="4.4" /></g>
+        <circle cx="561" cy="374" r="3" fill="#f2b705" />
+      </g>
+    </svg>
+
+    <div class="text">
+      <span class="chip"><span class="dot"></span>$MOOBOT · The Tournament</span>
+      <h1>Moofield</h1>
+      <p>Every pitch needs a power-up.</p>
+    </div>
+
+    <img class="moo" src="../../public/moobot-assets/moobot-agent.svg" alt="" />
+
+    <!-- Bumble the bee (same drawing as the site) -->
+    <svg class="bee" viewBox="0 0 64 56" width="86" height="75.25">
+      <ellipse cx="28" cy="18" rx="10" ry="7" fill="#fff" stroke="#4f93cf" stroke-opacity="0.5" transform="rotate(-25 28 18)" />
+      <ellipse cx="38" cy="16" rx="9" ry="6" fill="#fff" stroke="#4f93cf" stroke-opacity="0.5" transform="rotate(20 38 16)" />
+      <path d="M12 32 L5 34 L12 36 Z" fill="#3b2f22" />
+      <ellipse cx="30" cy="34" rx="18" ry="12" fill="#f6c945" />
+      <rect x="22" y="23" width="4.5" height="22" rx="2" fill="#3b2f22" />
+      <rect x="32" y="22.5" width="4.5" height="23" rx="2" fill="#3b2f22" />
+      <circle cx="49" cy="33" r="8" fill="#3b2f22" />
+      <circle cx="51.5" cy="30.5" r="2.2" fill="#fffdf7" />
+      <path d="M48 25 Q50 17 55 16 M52 26 Q56 20 60 21" stroke="#3b2f22" stroke-width="1.6" fill="none" stroke-linecap="round" />
+    </svg>
+
+    <!-- Crowley the crow on a fence post, facing MooBot -->
+    <svg class="crow" viewBox="0 0 64 56" width="96" height="84">
+      <path d="M4 46 Q32 42 60 46" stroke="#8a6a45" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      <path d="M40 30 L56 36 L54 28 Z" fill="#2b2f2a" />
+      <ellipse cx="34" cy="30" rx="14" ry="10" fill="#2b2f2a" />
+      <circle cx="22" cy="20" r="8" fill="#2b2f2a" />
+      <path d="M16 17 L6 21 L16 24 Z" fill="#f2b705" />
+      <circle cx="20" cy="18.5" r="2.2" fill="#fffdf7" />
+      <ellipse cx="36" cy="27" rx="9" ry="5" fill="#454b43" transform="rotate(-18 36 27)" />
+      <path d="M30 39 V45 M37 39 V45" stroke="#8a6a45" stroke-width="2" stroke-linecap="round" />
+    </svg>
+  </div>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!doctype html>
+<!--
+  Cover image for an X Article: "Welcome to Moofield", with the whole crew named.
+  1500 x 600 (X Articles use a 5:2 cover). Rendered at 2x for a sharp 3000 x 1200 PNG.
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; width: 1500px; height: 600px; overflow: hidden; }
+  .wrap { position: relative; width: 1500px; height: 600px; overflow: hidden; font-family: Nunito, sans-serif; color: #1e2a1c;
+    background: linear-gradient(180deg, #dcedf5 0%, #eaf2ea 55%, #f7f3e3 100%); }
+  svg.scene { position: absolute; inset: 0; }
+  .text { position: absolute; left: 96px; top: 118px; }
+  .chip { display: inline-flex; align-items: center; gap: 10px; padding: 7px 16px; border-radius: 999px;
+    background: rgb(255 253 247 / .85); border: 1.5px solid rgb(30 42 28 / .12); color: #56634f; font-weight: 700; font-size: 18px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #5daa4a; box-shadow: 0 0 0 4px rgb(93 170 74 / .2); }
+  .pre { margin: 22px 0 0; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 46px; line-height: 1; color: #1e2a1c; }
+  h1 { margin: 4px 0 0 -4px; font-family: Fredoka, sans-serif; font-weight: 700; font-size: 128px; line-height: 1; letter-spacing: -3.5px; color: #1f5a22; }
+  .sub { margin: 16px 0 0; font-size: 24px; font-weight: 700; color: #56634f; }
+  .sub b { color: #1e2a1c; }
+
+  /* Name tags, like the character cards on the site */
+  .tag { position: absolute; transform: translateX(-50%); padding: 8px 16px 9px; border-radius: 16px; text-align: center; white-space: nowrap;
+    background: #fffdf7; border: 1.5px solid rgb(30 42 28 / .12); box-shadow: 0 6px 16px rgb(30 42 28 / .08); }
+  .tag b { display: block; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 24px; line-height: 1.1; color: #1e2a1c; }
+  .tag span { display: block; margin-top: 2px; font-size: 14px; font-weight: 700; color: #56634f; }
+  .tag.moo b { color: #2f7a32; }
+  .tag.down::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 14px; height: 14px; margin-left: -7px; transform: rotate(45deg);
+    background: #fffdf7; border-right: 1.5px solid rgb(30 42 28 / .12); border-bottom: 1.5px solid rgb(30 42 28 / .12); }
+  .tag.up::after { content: ""; position: absolute; left: 50%; top: -8px; width: 14px; height: 14px; margin-left: -7px; transform: rotate(45deg);
+    background: #fffdf7; border-left: 1.5px solid rgb(30 42 28 / .12); border-top: 1.5px solid rgb(30 42 28 / .12); }
+</style>
+<script src="kit.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <svg class="scene" id="scene" width="1500" height="600" viewBox="0 0 1500 600"></svg>
+
+    <div class="text">
+      <span class="chip"><span class="dot"></span>$MOOBOT · The Tournament</span>
+      <p class="pre">Welcome to</p>
+      <h1>Moofield</h1>
+      <p class="sub">Every pitch needs a power-up. <b>Meet the crew.</b></p>
+    </div>
+
+    <div class="tag down" style="left: 712px; top: 92px"><b>Bumble</b><span>the bee</span></div>
+    <div class="tag moo up" style="left: 1060px; top: 520px"><b>MooBot</b><span>the AI agent robot cow</span></div>
+    <div class="tag down" style="left: 1392px; top: 262px"><b>Crowley</b><span>the crow</span></div>
+  </div>
+
+<script>
+  const MOO = { cx: 1060, ground: 494, h: 400 };
+  const [antX, antY] = moobotPoint(MOO.cx, MOO.ground, MOO.h, 200, 26);
+  const [headX, headY] = moobotPoint(MOO.cx, MOO.ground, MOO.h, 200, 150);
+
+  document.getElementById("scene").innerHTML = [
+    defs(),
+    sunRing(headX, headY, 212),
+    dandelion(640, 330, 1.4, -14),
+    dandelion(1250, 70, 1.2, 10),
+    dandelion(1460, 150, 1.1, -8),
+    dandelion(880, 420, 1, 18),
+
+    // Bloom Pop seeds drifting up through the sky
+    seed(2, 1296, 172, 21),
+    seed(3, 1214, 108, 15),
+    seed(4, 842, 96, 16),
+    seed(0, 606, 222, 14),
+
+    // Bumble's pollen trail, from a buttercup up to where he is now
+    trail("M664 452 C 650 400, 690 350, 706 318 S 730 270, 742 246"),
+
+    hill("M-50 492 C 240 452, 470 456, 700 474 S 1100 500, 1300 478 S 1450 462, 1550 470", "#e3eedb"),
+
+    // Crowley on his post at the right
+    crowley(1392, 404, 1.65, { postH: 90 }),
+
+    moobot(MOO.cx, MOO.ground, MOO.h),
+    // MooBot balances the next seed on his head, like in Bloom Pop
+    seed(1, antX, antY - 19, 19),
+
+    hill("M-50 556 C 300 522, 600 530, 900 544 S 1300 556, 1550 522", "#d5e7cb"),
+
+    // Pollen Path flowers along the hills
+    flower(2, 664, 452, 1.1),
+    flower(0, 572, 512, 0.9),
+    flower(1, 798, 500, 0.85),
+    flower(3, 1250, 490, 0.9),
+    flower(4, 1470, 488, 0.9),
+    tuft(520, 548, 1.2), tuft(920, 548, 1), tuft(1200, 556, 1.2), tuft(1330, 486, 1), tuft(760, 476, 1),
+
+    bumble(700, 178, 1.7, -14),
+  ].join("");
+</script>
+</body>
+</html>

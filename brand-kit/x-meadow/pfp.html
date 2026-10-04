@@ -1,0 +1,55 @@
+<!doctype html>
+<!--
+  Moofield X profile picture, meadow theme (matches the website hero).
+  Rendered at 1000 x 1000; X shows it in a circle, so everything important sits in the middle.
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; width: 1000px; height: 1000px; overflow: hidden; }
+  .wrap { position: relative; width: 1000px; height: 1000px; overflow: hidden;
+    background: linear-gradient(180deg, #dcedf5 0%, #eaf2ea 48%, #f7f3e3 100%); }
+  svg.land, img { position: absolute; }
+  svg.land { inset: 0; width: 1000px; height: 1000px; }
+  img { left: 100px; top: 44px; width: 800px; height: 840px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <svg class="land" viewBox="0 0 1000 1000" fill="none">
+      <!-- Sun: a light wash, a thin gold ring and a dotted outer ring, like the hero -->
+      <circle cx="500" cy="420" r="360" fill="#f2b705" fill-opacity=".1" />
+      <circle cx="500" cy="420" r="360" stroke="#f2b705" stroke-opacity=".55" stroke-width="3" />
+      <circle cx="500" cy="420" r="410" stroke="#f2b705" stroke-opacity=".28" stroke-width="2.5" stroke-dasharray="4 18" stroke-linecap="round" />
+
+      <!-- Dandelion seeds drifting -->
+      <g stroke="#56634f" stroke-opacity=".45" stroke-width="2.4" stroke-linecap="round">
+        <g transform="translate(150 500) scale(2.2) rotate(-12)"><path d="M0 0 V14" /><path d="M0 0 l0 -8" transform="rotate(-60)" /><path d="M0 0 l0 -8" transform="rotate(-30)" /><path d="M0 0 l0 -8" /><path d="M0 0 l0 -8" transform="rotate(30)" /><path d="M0 0 l0 -8" transform="rotate(60)" /></g>
+        <g transform="translate(820 250) scale(1.7) rotate(14)"><path d="M0 0 V14" /><path d="M0 0 l0 -8" transform="rotate(-60)" /><path d="M0 0 l0 -8" transform="rotate(-30)" /><path d="M0 0 l0 -8" /><path d="M0 0 l0 -8" transform="rotate(30)" /><path d="M0 0 l0 -8" transform="rotate(60)" /></g>
+      </g>
+      <g fill="#5daa4a" fill-opacity=".5"><circle cx="250" cy="560" r="6" /><circle cx="770" cy="520" r="5" /></g>
+
+      <!-- Two soft hills with thin outlines; MooBot stands on the near one -->
+      <path d="M0 760 C 170 700, 330 706, 500 736 S 820 772, 1000 702 V1000 H0 Z" fill="#e3eedb" />
+      <path d="M0 760 C 170 700, 330 706, 500 736 S 820 772, 1000 702" stroke="#2f7a32" stroke-opacity=".4" stroke-width="3.2" />
+      <path d="M0 846 C 220 800, 400 790, 560 800 S 860 820, 1000 790 V1000 H0 Z" fill="#d5e7cb" />
+      <path d="M0 846 C 220 800, 400 790, 560 800 S 860 820, 1000 790" stroke="#2f7a32" stroke-opacity=".5" stroke-width="3.2" />
+      <!-- Grass tufts and two little flowers -->
+      <g stroke="#2f7a32" stroke-opacity=".55" stroke-width="3" stroke-linecap="round">
+        <path d="M200 850 q -7 -26 -18 -34 M200 850 q 0 -30 5 -42 M200 850 q 9 -22 20 -28" />
+        <path d="M820 846 q -7 -26 -18 -34 M820 846 q 0 -30 5 -42 M820 846 q 9 -22 20 -28" />
+        <path d="M120 752 q -6 -20 -14 -26 M120 752 q 0 -24 4 -32 M120 752 q 7 -17 16 -22" />
+      </g>
+      <path d="M300 860 q 4 -22 0 -42" stroke="#5daa4a" stroke-width="3" stroke-linecap="round" />
+      <g fill="#fffdf7" stroke="#e7d38a" stroke-width="1.5"><circle cx="291" cy="818" r="8" /><circle cx="309" cy="818" r="8" /><circle cx="300" cy="809" r="8" /><circle cx="300" cy="827" r="8" /></g>
+      <circle cx="300" cy="818" r="5.5" fill="#f2b705" />
+      <path d="M716 866 q -3 -20 1 -38" stroke="#5daa4a" stroke-width="3" stroke-linecap="round" />
+      <g fill="#f4b9c8" stroke="#e48aa3" stroke-width="1.5"><circle cx="709" cy="828" r="7" /><circle cx="725" cy="828" r="7" /><circle cx="717" cy="820" r="7" /><circle cx="717" cy="836" r="7" /></g>
+      <circle cx="717" cy="828" r="4.8" fill="#f2b705" />
+    </svg>
+
+    <img src="../../public/moobot-assets/moobot-agent.svg" alt="" />
+  </div>
+</body>
+</html>

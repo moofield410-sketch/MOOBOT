@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- A rough mock of an X profile, to check the banner and picture together. Not for upload. -->
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body { margin: 0; padding: 32px; background: #e9ecef; font-family: system-ui, sans-serif; display: flex; gap: 40px; align-items: flex-start; }
+  .profile { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgb(0 0 0 / .1); }
+  .desk { width: 600px; } .phone { width: 390px; }
+  .banner { display: block; width: 100%; aspect-ratio: 3 / 1; object-fit: cover; }
+  .row { position: relative; padding: 0 16px 16px; }
+  .avatar { position: absolute; left: 16px; border-radius: 50%; border: 4px solid #fff; background: #fff; }
+  .desk .avatar { width: 134px; height: 134px; top: -71px; } .desk .row { padding-top: 76px; }
+  .phone .avatar { width: 80px; height: 80px; top: -44px; } .phone .row { padding-top: 48px; }
+  .name { position: relative; }
+  .name b { display: block; font-size: 20px; } .name span { color: #536471; font-size: 15px; }
+  .small { display: flex; flex-direction: column; gap: 16px; align-items: center; padding-top: 20px; }
+  .small img { border-radius: 50%; }
+  h2 { font-size: 13px; color: #536471; margin: 0 0 8px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div>
+    <h2>Desktop</h2>
+    <div class="profile desk">
+      <img class="banner" src="moofield-x-banner@2x.png" alt="" />
+      <div class="row"><img class="avatar" src="moofield-x-pfp.png" alt="" /><div class="name"><b>Moofield</b><span>@M00FIELD</span></div></div>
+    </div>
+  </div>
+  <div>
+    <h2>Phone</h2>
+    <div class="profile phone">
+      <img class="banner" src="moofield-x-banner@2x.png" alt="" />
+      <div class="row"><img class="avatar" src="moofield-x-pfp.png" alt="" /><div class="name"><b>Moofield</b><span>@M00FIELD</span></div></div>
+    </div>
+  </div>
+  <div>
+    <h2>In posts and replies</h2>
+    <div class="small">
+      <img src="moofield-x-pfp.png" width="48" height="48" alt="" />
+      <img src="moofield-x-pfp.png" width="40" height="40" alt="" />
+      <img src="moofield-x-pfp.png" width="32" height="32" alt="" />
+    </div>
+  </div>
+</body>
+</html>

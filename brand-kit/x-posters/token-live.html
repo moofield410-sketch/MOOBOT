@@ -1,0 +1,120 @@
+<!doctype html>
+<!--
+  Post image for the day $MOOBOT goes live. 1600 x 900 (16:9, shows uncropped in the X timeline).
+  Rendered at 2x for a sharp 3200 x 1800 PNG.
+  Optional: add ?ca=0x... to the address to print the official contract address on the poster.
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; width: 1600px; height: 900px; overflow: hidden; }
+  .wrap { position: relative; width: 1600px; height: 900px; overflow: hidden; font-family: Nunito, sans-serif; color: #1e2a1c;
+    background: linear-gradient(180deg, #dcedf5 0%, #eaf2ea 55%, #f7f3e3 100%); }
+  svg.scene { position: absolute; inset: 0; }
+  .text { position: absolute; left: 110px; top: 168px; width: 680px; }
+  .live { display: inline-flex; align-items: center; gap: 12px; padding: 9px 20px; border-radius: 999px; background: #2f7a32; color: #fff;
+    font-family: Fredoka, sans-serif; font-weight: 600; font-size: 22px; letter-spacing: 2px; text-transform: uppercase; box-shadow: 0 4px 0 #1f5a22; }
+  .live i { width: 10px; height: 10px; border-radius: 50%; background: #7cf29a; box-shadow: 0 0 0 5px rgb(124 242 154 / .3); }
+  h1 { margin: 22px 0 0 -6px; font-family: Fredoka, sans-serif; font-weight: 700; font-size: 160px; line-height: .95; letter-spacing: -4px; color: #1f5a22; }
+  h2 { margin: 0; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 84px; line-height: 1.05; letter-spacing: -1.5px; color: #1e2a1c; }
+  .sub { margin: 18px 0 0; font-size: 28px; font-weight: 700; color: #56634f; }
+  .verify { margin-top: 26px; width: 620px; padding: 16px 22px 18px; border-radius: 20px; background: #fffdf7; border: 1.5px solid rgb(30 42 28 / .12);
+    box-shadow: 0 8px 22px rgb(30 42 28 / .07); }
+  .verify .k { font-size: 14px; font-weight: 800; letter-spacing: 2.4px; text-transform: uppercase; color: #2f7a32; }
+  .verify .v { margin-top: 6px; font-size: 21px; font-weight: 700; line-height: 1.35; color: #1e2a1c; }
+  .verify .ca { margin-top: 6px; font-family: "JetBrains Mono", monospace; font-weight: 600; font-size: 19px; word-break: break-all; color: #1e2a1c; }
+  .verify .n { margin-top: 6px; font-size: 16px; font-weight: 700; color: #56634f; }
+  .foot { position: absolute; left: 110px; bottom: 30px; font-size: 16px; font-weight: 700; color: #56634f; }
+  .foot b { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 20px; color: #1e2a1c; margin-right: 14px; }
+</style>
+<script src="kit.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <svg class="scene" id="scene" width="1600" height="900" viewBox="0 0 1600 900"></svg>
+
+    <div class="text">
+      <span class="live"><i></i>Live now</span>
+      <h1>$MOOBOT</h1>
+      <h2>is live.</h2>
+      <p class="sub">MooBot is awake and the meadow is open.</p>
+      <div class="verify" id="verify">
+        <div class="k">Official contract</div>
+        <div class="v">Copy it only from the Moofield website or our pinned post.</div>
+        <div class="n">Ignore DMs and look-alike tokens.</div>
+      </div>
+    </div>
+
+    <p class="foot"><b>@M00FIELD</b>Independent community project, not affiliated with Orbio. Not financial advice.</p>
+  </div>
+
+<script>
+  // Optional contract address from ?ca=0x...
+  const ca = new URLSearchParams(location.search).get("ca");
+  if (ca && /^0x[0-9a-fA-F]{40}$/.test(ca)) {
+    document.getElementById("verify").innerHTML = `<div class="k">Official contract</div><div class="ca">${ca}</div>
+      <div class="n">Check it against the Moofield website. Ignore DMs and look-alike tokens.</div>`;
+  }
+
+  const MOO = { cx: 1170, ground: 744, h: 500 };
+  const [hx, hy] = moobotPoint(MOO.cx, MOO.ground, MOO.h, 200, 150);
+
+  // Sun rays behind MooBot
+  const rays = Array.from({ length: 28 }, (_, i) => {
+    const a = (i / 28) * Math.PI * 2;
+    const r1 = 286, r2 = i % 2 ? 318 : 334;
+    return `M${hx + Math.cos(a) * r1} ${hy + Math.sin(a) * r1} L${hx + Math.cos(a) * r2} ${hy + Math.sin(a) * r2}`;
+  }).join(" ");
+
+  // Petal confetti, only over the scene side
+  const rand = rng(41);
+  const colors = ["#f6c945", "#ec7a62", "#7fb8e6", "#b48ad9", "#5daa4a", "#fffdf7", "#f2b705"];
+  let confetti = "";
+  for (let i = 0; i < 46; i++) {
+    const x = 800 + rand() * 780, y = 130 + rand() * 560;
+    if (Math.hypot(x - hx, y - (hy + 60)) < 230) continue; // keep MooBot's face clear
+    const c = colors[i % colors.length];
+    confetti += i % 3
+      ? `<ellipse cx="${x}" cy="${y}" rx="${5 + rand() * 4}" ry="${2.6 + rand() * 1.4}" transform="rotate(${rand() * 180} ${x} ${y})" fill="${c}" stroke="rgb(30 42 28 / .12)" stroke-width="1" />`
+      : `<circle cx="${x}" cy="${y}" r="${2.5 + rand() * 2.5}" fill="${c}" opacity=".85" />`;
+  }
+
+  // Bumble flies in with the first $MOOBOT coin on a thread
+  const bee = { x: 1350, y: 150, s: 1.9 };
+  const coinX = bee.x + 34 * bee.s, coinY = bee.y + 46 * bee.s + 62;
+  const coin = `<path d="M${coinX} ${bee.y + 44 * bee.s} L${coinX} ${coinY - 30}" stroke="#8a6a45" stroke-width="1.6" />
+    <g transform="translate(${coinX} ${coinY})" stroke="#1E2A1C" stroke-linejoin="round" stroke-linecap="round" filter="url(#soft)">
+      <circle r="30" fill="url(#coin)" stroke-width="4" />
+      <circle r="20.5" fill="none" stroke="#B98600" stroke-width="2.4" />
+      <path d="M-13.5 12 V-12 L0 3 L13.5 -12 V12" fill="none" stroke="#6B4700" stroke-width="5.5" />
+    </g>`;
+
+  document.getElementById("scene").innerHTML = [
+    defs(),
+    sunRing(hx, hy, 262),
+    `<path d="${rays}" stroke="#f2b705" stroke-opacity=".34" stroke-width="5" stroke-linecap="round" />`,
+    confetti,
+    bunting(-30, 1630, 22, 34, 24, ["#5daa4a", "#f6c945", "#7fb8e6", "#b48ad9", "#ec7a62", "#fffdf7"]),
+    dandelion(860, 300, 1.5, -12), dandelion(1556, 400, 1.3, 14),
+
+    // Bloom Pop seeds floating up to celebrate
+    seed(0, 880, 470, 20), seed(2, 1520, 300, 18), seed(4, 900, 186, 15), seed(3, 850, 620, 16),
+
+    trail("M1590 120 C 1560 140, 1520 120, 1478 170 S 1440 190, 1460 200"),
+    hill("M-50 752 C 300 716, 600 724, 900 742 S 1350 762, 1650 730", "#e3eedb"),
+    crowley(1520, 652, 2, { hat: true, postH: 110 }),
+    moobot(MOO.cx, MOO.ground, MOO.h, "happy"),
+    hill("M-50 826 C 360 794, 760 802, 1100 814 S 1450 826, 1650 798", "#d5e7cb"),
+
+    // All five Pollen Path flowers in bloom
+    flower(0, 840, 744, 1.1), flower(1, 930, 760, 1), flower(2, 1440, 742, 1.1), flower(3, 770, 790, 0.9), flower(4, 1340, 790, 1),
+    tuft(700, 780, 1.3), tuft(1010, 806, 1.2), tuft(1580, 790, 1.2), tuft(600, 820, 1),
+
+    coin,
+    bumble(bee.x, bee.y, bee.s, -8, true),
+  ].join("");
+</script>
+</body>
+</html>

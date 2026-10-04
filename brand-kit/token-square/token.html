@@ -1,0 +1,49 @@
+<!doctype html>
+<!--
+  $MOOBOT token image: square, full-bleed, MooBot's face as big as it fits. No ring or badge,
+  so launch sites that show the whole square (or crop it themselves) get a clean picture.
+  1000 x 1000.
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; width: 1000px; height: 1000px; overflow: hidden; }
+  .wrap { position: relative; width: 1000px; height: 1000px; overflow: hidden;
+    background: linear-gradient(180deg, #cfe6f2 0%, #e2efe9 50%, #f7f3e3 100%); }
+  svg { position: absolute; inset: 0; }
+</style>
+<script src="../x-posters/kit.js"></script>
+</head>
+<body>
+  <div class="wrap"><svg id="scene" width="1000" height="1000" viewBox="0 0 1000 1000"></svg></div>
+
+<script>
+  // moobot-head.svg has viewBox "34 14 332 234"; W is how wide it is drawn here.
+  const W = 960, s = W / 332;
+  const x0 = 20, y0 = 132;
+  const at = (px, py) => [x0 + (px - 34) * s, y0 + (py - 14) * s];
+  const [, chinY] = at(200, 238);
+
+  const cloud = (x, y, k) => `<g transform="translate(${x} ${y}) scale(${k})" fill="#fffdf7" opacity=".9">
+    <ellipse cx="0" cy="0" rx="46" ry="20" /><ellipse cx="-26" cy="-10" rx="24" ry="20" /><ellipse cx="14" cy="-18" rx="28" ry="24" /></g>`;
+
+  document.getElementById("scene").innerHTML = [
+    defs(),
+    cloud(140, 120, 1.5), cloud(860, 96, 1.2), cloud(905, 300, 0.8),
+    dandelion(90, 330, 2.2, -14), dandelion(930, 420, 1.8, 12), dandelion(250, 70, 1.4, 8),
+
+    hill("M-50 760 C 180 700, 380 712, 560 734 S 860 752, 1050 700", "#e3eedb"),
+    // Soft shadow on the grass under his chin
+    `<ellipse cx="500" cy="${chinY + 16}" rx="290" ry="24" fill="#1e2a1c" opacity=".12" />`,
+    hill("M-50 900 C 220 862, 460 858, 640 870 S 900 884, 1050 852", "#d5e7cb"),
+
+    `<image href="../../public/moobot-assets/moobot-head.svg" x="${x0}" y="${y0}" width="${W}" height="${(W * 234) / 332}" />`,
+
+    // Pollen Path flowers along the front hill
+    flower(2, 70, 878, 2.2), flower(1, 200, 930, 1.7), flower(4, 820, 930, 1.8), flower(0, 940, 870, 2.1),
+    tuft(330, 960, 2.2), tuft(660, 960, 2.2), tuft(120, 740, 1.8), tuft(880, 724, 1.8),
+  ].join("");
+</script>
+</body>
+</html>
