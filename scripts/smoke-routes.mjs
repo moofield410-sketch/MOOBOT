@@ -77,6 +77,7 @@ const PAGES = [
   ["/privacy", 200, "Privacy"],
   ["/wallet", 200, "Your wallet"],
   ["/", 200, "Official updates"],
+  ["/", 200, "Pollen Path"],
   ["/", 200, "@M00FIELD"],
   ["/tournament/recaps", 200, "No recaps yet"],
   ["/tournament/recaps/1", 404, "Page not found"],

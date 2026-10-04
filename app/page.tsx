@@ -4,6 +4,7 @@ import { Faq, type FaqItem } from "@/components/Faq";
 import { LaunchTimeline, NextUnlockLabel, NextUnlockValue } from "@/components/LaunchTimeline";
 import { BloomPop, Crowley } from "@/components/home/BloomPop";
 import { HomeHero } from "@/components/home/HomeHero";
+import { Bumble, PollenPath } from "@/components/home/PollenPath";
 import { MasterSpotlight } from "@/components/home/MasterSpotlight";
 import { MastersMarquee } from "@/components/home/MastersMarquee";
 import { MooBotMascot } from "@/components/MooBotMascot";
@@ -22,6 +23,7 @@ import { StatTile } from "@/components/ui/Stats";
 import { SprigDivider } from "@/components/ui/Nature";
 import { AGENT_LIVE_AT, FULL_UNLOCK_AFTER_H, SITE, TOURNAMENT, VOTING } from "@/config";
 import { MISSES_PER_ROW, SEEDS } from "@/lib/bloom-pop";
+import { PETALS } from "@/lib/pollen-path";
 import { buildTimeline } from "@/lib/schedule";
 import { getCreditMarket } from "@/lib/credit-market";
 import { getCredits } from "@/lib/credits";
@@ -175,6 +177,56 @@ export default async function HomePage() {
           <p className="mt-8 max-w-lg border-t border-line pt-4 text-xs text-fern">
             Just for fun. Your best score stays in this browser, has no value and never unlocks anything.
           </p>
+        </div>
+      </section>
+
+      {/* Pollen Path: a one-tap game, mirrored next to Bloom Pop */}
+      <section aria-labelledby="pollen-path" className="grid items-start gap-10 lg:grid-cols-[1fr_auto] lg:gap-16" data-reveal>
+        <div className="lg:pt-10">
+          <p className="eyebrow mb-2">One tap, one bee</p>
+          <h2 id="pollen-path" className="scroll-mt-24 font-display text-3xl font-semibold text-soil sm:text-4xl">
+            Pollen Path
+          </h2>
+          <p className="mt-3 max-w-lg text-fern">
+            Bumble the bee circles a flower. Tap when he faces the next bud and he dashes to it, the bud blooms and the pollen trail
+            grows up the meadow. The path speeds up as it climbs.
+          </p>
+
+          <ul className="mt-8 grid max-w-lg gap-4 sm:grid-cols-2">
+            <li className="flex gap-3 rounded-2xl border border-line bg-milk p-4">
+              <Bumble size={52} />
+              <div>
+                <p className="font-display font-semibold text-soil">Bumble the bee</p>
+                <p className="mt-1 text-sm text-fern">Circles each flower, the other way each time. One tap, one dash.</p>
+              </div>
+            </li>
+            <li className="flex gap-3 rounded-2xl border border-line bg-milk p-4">
+              <MooBotMascot variant="head" size={52} decorative className="shrink-0" />
+              <div>
+                <p className="font-display font-semibold text-grass">MooBot</p>
+                <p className="mt-1 text-sm text-fern">Watches from the ground and catches Bumble once per run.</p>
+              </div>
+            </li>
+          </ul>
+
+          <div className="mt-6 max-w-lg">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fern">The flowers</p>
+            <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+              {PETALS.map((p) => (
+                <li key={p.name} className="flex items-center gap-2 text-sm text-soil">
+                  <span aria-hidden className="h-3 w-3 rounded-full border" style={{ background: p.fill, borderColor: p.ring }} />
+                  {p.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="mt-8 max-w-lg border-t border-line pt-4 text-xs text-fern">
+            Just for fun. Today&apos;s path is the same for everyone and changes at 00:00 UTC. Your best stays in this browser and has no value.
+          </p>
+        </div>
+        <div className="flex justify-center">
+          <PollenPath />
         </div>
       </section>
 
