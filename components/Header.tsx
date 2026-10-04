@@ -59,7 +59,7 @@ export function Header() {
           scrolled || open ? "border-line bg-hay/70 backdrop-blur-xl" : "border-transparent bg-transparent"
         }`}
       >
-        <div className="safe-x mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 sm:[--safe-pad:1.5rem]">
+        <div className="safe-x relative mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 sm:[--safe-pad:1.5rem]">
           <Link href="/" aria-label="Moofield home" className="flex h-11 shrink-0 items-center">
             <span className="flex items-center gap-2.5">
               <MooBotMascot variant="head" size={28} decorative />
@@ -67,8 +67,9 @@ export function Header() {
             </span>
           </Link>
 
-          <nav aria-label="Main" className="hidden lg:block">
-            <ul className="flex items-center gap-1">
+          {/* Pages as one pill tab bar, centered between the logo and the wallet. */}
+          <nav aria-label="Main" className="hidden lg:absolute lg:left-1/2 lg:block lg:-translate-x-1/2">
+            <ul className="flex items-center gap-0.5 rounded-full border border-line bg-milk/70 p-1">
               {NAV.map((n) => {
                 const active = isActive(pathname, n.href);
                 return (
@@ -76,7 +77,7 @@ export function Header() {
                     <Link
                       href={n.href}
                       aria-current={active ? "page" : undefined}
-                      className={`nav-underline glint rounded-full px-3 py-2 text-sm font-medium no-underline transition-colors ${
+                      className={`nav-underline rounded-full px-3.5 py-1.5 text-sm font-medium no-underline transition-colors ${
                         active ? "text-grass" : "text-soil/80 hover:text-soil"
                       }`}
                     >

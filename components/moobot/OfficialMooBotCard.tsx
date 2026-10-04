@@ -14,12 +14,12 @@ const VERIFY_HREF = "/docs/safety#how-to-verify-the-official-moobot-contract";
  * (lib/moobot.ts); before that it says "Not launched yet". The full card adds live market figures;
  * `compact` (footer and Docs) shows the address only.
  */
-export function OfficialMooBotCard({ compact = false }: { compact?: boolean }) {
+export function OfficialMooBotCard({ compact = false, stacked = false }: { compact?: boolean; /** Head above the text, for narrow columns. */ stacked?: boolean }) {
   const { data, isLoading, isError } = useMooBot();
   const verified = data?.status === "verified" ? data : null;
 
   return (
-    <section aria-label="Official $MOOBOT contract" className={compact ? "" : "card relative flex flex-col items-start gap-5 overflow-hidden p-6 sm:flex-row sm:items-center sm:gap-6 sm:p-7"}>
+    <section aria-label="Official $MOOBOT contract" className={compact ? "" : `card relative flex flex-col items-start gap-5 overflow-hidden p-6 sm:p-7 ${stacked ? "h-full justify-center [&>div]:flex-none" : "sm:flex-row sm:items-center sm:gap-6"}`}>
       {!compact && (
         <MooBotMascot variant="head" size={64} state={verified ? "happy" : isLoading ? "thinking" : "sleeping"} decorative className="shrink-0" />
       )}

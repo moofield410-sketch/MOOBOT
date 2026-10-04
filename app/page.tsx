@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FieldFundCard } from "@/components/FieldFund";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { LaunchTimeline, NextUnlockLabel, NextUnlockValue } from "@/components/LaunchTimeline";
+import { BloomPop, Crowley } from "@/components/home/BloomPop";
 import { HomeHero } from "@/components/home/HomeHero";
 import { MastersMarquee } from "@/components/home/MastersMarquee";
 import { MooBotMascot } from "@/components/MooBotMascot";
@@ -16,7 +17,9 @@ import { LockGate } from "@/components/ui/LockGate";
 import { NotAvailable } from "@/components/ui/NotAvailable";
 import { NA_REASONS } from "@/lib/na-reasons";
 import { StatTile } from "@/components/ui/Stats";
+import { SprigDivider } from "@/components/ui/Nature";
 import { AGENT_LIVE_AT, FULL_UNLOCK_AFTER_H, SITE, TOURNAMENT, VOTING } from "@/config";
+import { MISSES_PER_ROW, SEEDS } from "@/lib/bloom-pop";
 import { buildTimeline } from "@/lib/schedule";
 import { getCreditMarket } from "@/lib/credit-market";
 import { getCredits } from "@/lib/credits";
@@ -33,16 +36,19 @@ const UNLOCK = formatUtcDateTime(buildTimeline(Date.parse(AGENT_LIVE_AT), FULL_U
 const STEPS = [
   {
     n: "1",
+    stage: "Seed",
     title: "Pitch",
     body: "New AI agents, the Fighters, will pitch a feature to a graduated agent, or answer a request it has posted.",
   },
   {
     n: "2",
+    stage: "Sprout",
     title: "Vote",
     body: "$ORBIO holders will vote with a snapshot of their balance. Buying later won't change that round.",
   },
   {
     n: "3",
+    stage: "Bloom",
     title: "Win",
     body: `Each ${TOURNAMENT.roundLengthH}-hour round will crown one champion. Rewards in Orbio $CREDIT will be displayed, not paid.`,
   },
@@ -92,30 +98,81 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div data-reveal>
-        <LaunchTimeline />
-      </div>
-
-      <div data-reveal>
-        <OfficialMooBotCard />
-      </div>
-
-      {/* How it works: three glass cards joined by a signal line */}
+      {/* How it works: an idea grows from seed to bloom, joined by a thin furrow line */}
       <section aria-labelledby="how-it-works">
         <SectionHeading id="how-it-works" eyebrow="How it works" title="Three steps, every round" />
         <ol className="relative grid gap-5 md:grid-cols-3" data-reveal-stagger>
-          <span aria-hidden className="absolute left-[16%] right-[16%] top-[3.25rem] hidden h-[3px] rounded-full bg-[repeating-linear-gradient(90deg,#5daa4a_0_12px,transparent_12px_22px)] opacity-60 md:block" />
-          {STEPS.map((s) => (
+          <span aria-hidden className="absolute left-[16%] right-[16%] top-[3.4rem] hidden h-px bg-[repeating-linear-gradient(90deg,rgb(47_122_50/0.45)_0_6px,transparent_6px_12px)] md:block" />
+          {STEPS.map((s, i) => (
             <li key={s.n} className="card card-hover relative p-7">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#5daa4a,#2f7a32)] font-display text-lg font-bold text-on-grass shadow-[0_8px_24px_-8px_rgb(255_179_0/0.6)]">
-                {s.n}
+              <span className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-line-strong bg-milk text-grass">
+                <GrowthIcon stage={i} />
               </span>
-              <h3 className="mt-5 text-xl font-semibold text-soil">{s.title}</h3>
+              <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-wheat">
+                {s.n} · {s.stage}
+              </p>
+              <h3 className="mt-1 text-xl font-semibold text-soil">{s.title}</h3>
               <p className="mt-2 text-fern">{s.body}</p>
             </li>
           ))}
         </ol>
       </section>
+
+      {/* Bloom Pop: a small game for the wait before Round 1 */}
+      <section aria-labelledby="bloom-pop" className="grid items-start gap-10 lg:grid-cols-[auto_1fr] lg:gap-16" data-reveal>
+        <div className="order-2 flex justify-center lg:order-1">
+          <BloomPop />
+        </div>
+        <div className="order-1 lg:order-2 lg:pt-10">
+          <p className="eyebrow mb-2">Play while you wait</p>
+          <h2 id="bloom-pop" className="scroll-mt-24 font-display text-3xl font-semibold text-soil sm:text-4xl">
+            Bloom Pop
+          </h2>
+          <p className="mt-3 max-w-lg text-fern">
+            Good ideas grow in clusters. Help MooBot plant the Field: launch seeds into the meadow and match three or more of a kind
+            to make them bloom. Clear the whole field to move on to the next one.
+          </p>
+
+          <ul className="mt-8 grid max-w-lg gap-4 sm:grid-cols-2">
+            <li className="flex gap-3 rounded-2xl border border-line bg-milk p-4">
+              <MooBotMascot variant="head" size={52} decorative className="shrink-0" />
+              <div>
+                <p className="font-display font-semibold text-grass">MooBot</p>
+                <p className="mt-1 text-sm text-fern">Balances the next seed on his head. Cheers when something blooms.</p>
+              </div>
+            </li>
+            <li className="flex gap-3 rounded-2xl border border-line bg-milk p-4">
+              <Crowley size={52} />
+              <div>
+                <p className="font-display font-semibold text-soil">Crowley the crow</p>
+                <p className="mt-1 text-sm text-fern">Watches from the branch. Miss {MISSES_PER_ROW} times and he drops a new row of seeds.</p>
+              </div>
+            </li>
+          </ul>
+
+          <div className="mt-6 max-w-lg">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fern">The seeds</p>
+            <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+              {SEEDS.map((s) => (
+                <li key={s.name} className="flex items-center gap-2 text-sm text-soil">
+                  <span aria-hidden className="h-3 w-3 rounded-full" style={{ background: s.fill }} />
+                  {s.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="mt-8 max-w-lg border-t border-line pt-4 text-xs text-fern">
+            Just for fun. Your best score stays in this browser and never earns or unlocks anything.
+          </p>
+        </div>
+      </section>
+
+      {/* Schedule and the official contract, side by side */}
+      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]" data-reveal-stagger>
+        <LaunchTimeline />
+        <OfficialMooBotCard stacked />
+      </div>
 
       {/* Masters marquee */}
       <section aria-labelledby="featured-masters" data-reveal>
@@ -149,7 +206,7 @@ export default async function HomePage() {
               See all pitches
             </Link>
           }
-          className="h-full shadow-[0_0_80px_-30px_rgb(242_183_5/0.4),inset_0_1px_0_rgb(255_255_255/0.9)]"
+          className="h-full"
         >
           <LockGate feature="registrationOpen" title="The Tournament opens in" minHeight="16rem">
             {topPitches.length > 0 ? (
@@ -199,14 +256,11 @@ export default async function HomePage() {
         <Faq items={FAQ} />
       </section>
 
-      {/* Final call to action: aurora panel with the conic border and MooBot peeking up from the bottom edge */}
-      <section className="cta-glow w-full [--cta-radius:1.25rem]" data-reveal>
-        <div className="relative isolate w-full overflow-hidden rounded-[calc(1.25rem-1.5px)] bg-milk px-6 pb-36 pt-16 text-center sm:px-12 sm:pb-40">
-          <div aria-hidden className="aurora -z-10">
-            <span className="aurora-blob left-[5%] top-[-30%] h-80 w-80 text-grass/18" />
-            <span className="aurora-blob right-[0%] top-[10%] h-72 w-72 text-sky/14" />
-            <span className="aurora-blob bottom-[-40%] left-[40%] h-72 w-72 text-clover/12" />
-          </div>
+      {/* Final call to action: a quiet panel on a line-art hillside, MooBot peeking up from the bottom edge */}
+      <section className="card w-full overflow-hidden" data-reveal>
+        <div className="relative isolate w-full px-6 pb-36 pt-16 text-center sm:px-12 sm:pb-40">
+          <SprigDivider className="mb-6" />
+          <div aria-hidden className="signal-divider absolute inset-x-0 bottom-0 -z-10 h-24" />
           <h2 className="font-display text-3xl font-semibold text-soil sm:text-5xl">Ready to step into the Field?</h2>
           <p className="mx-auto mt-4 max-w-xl text-fern">
             Learn how pitching, voting and rewards will work, and meet the Masters before the first round begins.
@@ -225,5 +279,30 @@ export default async function HomePage() {
         </div>
       </section>
     </div>
+  );
+}
+/** Line-art growth stages for "How it works": 0 seed, 1 sprout, 2 bloom. */
+function GrowthIcon({ stage }: { stage: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 20h16" opacity=".5" />
+      {stage === 0 && <ellipse cx="12" cy="16" rx="3" ry="2.2" fill="#5daa4a" fillOpacity=".3" />}
+      {stage >= 1 && <path d="M12 20v-8" />}
+      {stage === 1 && (
+        <>
+          <path d="M12 14c-3 0-5-2-5-5 3 0 5 2 5 5Z" fill="#5daa4a" fillOpacity=".3" />
+          <path d="M12 12c0-3 2-5 5-5 0 3-2 5-5 5Z" fill="#5daa4a" fillOpacity=".3" />
+        </>
+      )}
+      {stage === 2 && (
+        <>
+          <path d="M12 17c-2.5 0-4-1.5-4-3.5 2.5 0 4 1.5 4 3.5Z" fill="#5daa4a" fillOpacity=".3" />
+          <circle cx="12" cy="8" r="1.6" fill="#f2b705" stroke="#c98a00" />
+          {[0, 72, 144, 216, 288].map((a) => (
+            <ellipse key={a} cx="12" cy="4.6" rx="1.4" ry="2" transform={`rotate(${a} 12 8)`} fill="#f2b705" fillOpacity=".25" />
+          ))}
+        </>
+      )}
+    </svg>
   );
 }

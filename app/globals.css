@@ -87,11 +87,10 @@ html[data-preview-dismissed] .preview-banner {
  * Surfaces
  * ------------------------------------------------------------------------- */
 
+/* Minimal: a hairline and a barely-there shadow. */
 @utility card {
   @apply rounded-3xl border border-line bg-milk;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.9),
-    0 14px 34px -22px rgb(30 42 28 / 0.35);
+  box-shadow: 0 1px 2px rgb(30 42 28 / 0.04), 0 10px 28px -22px rgb(30 42 28 / 0.22);
 }
 
 /*
@@ -104,11 +103,9 @@ html[data-preview-dismissed] .preview-banner {
     border-color 200ms ease,
     box-shadow 300ms var(--ease-out-expo);
   &:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     border-color: rgb(47 122 50 / 0.3);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.9),
-      0 22px 40px -24px rgb(30 42 28 / 0.4);
+    box-shadow: 0 1px 2px rgb(30 42 28 / 0.05), 0 18px 34px -24px rgb(30 42 28 / 0.3);
     background-image: radial-gradient(420px circle at var(--mx, 50%) var(--my, -999px), rgb(242 183 5 / 0.09), transparent 60%);
   }
 }
@@ -288,7 +285,7 @@ html[data-preview-dismissed] .preview-banner {
   &::before {
     content: "";
     position: absolute;
-    inset: 2px 0;
+    inset: 0;
     z-index: -1;
     border-radius: 9999px;
     background: rgb(47 122 50 / 0.1);
@@ -421,7 +418,9 @@ html[data-preview-dismissed] .preview-banner {
   background: radial-gradient(circle, rgb(255 216 77 / 0.55), rgb(255 228 140 / 0.25) 42%, transparent 68%);
   pointer-events: none;
 }
+/* Rays retired for the minimal look; the warm disc stays. */
 .halo::after {
+  display: none;
   content: "";
   position: absolute;
   inset: 8%;

@@ -45,7 +45,7 @@ export function LaunchTimeline() {
   const progress = Math.min(1, Math.max(0, (now - timeline.agentLiveAt) / span));
 
   return (
-    <section className="card p-6 sm:p-8" aria-label="Schedule">
+    <section className="card h-full p-6 sm:p-8" aria-label="Schedule">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="eyebrow mb-2">{STAGE_LABEL[schedule.stage]}</p>
