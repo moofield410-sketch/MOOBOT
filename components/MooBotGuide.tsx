@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 import { MooBotMascot, type MascotState } from "@/components/MooBotMascot";
 import { AURA_RING } from "@/components/moobot/aura";
+import { playSfx } from "@/components/sound/engine";
 import { useSchedule } from "@/components/ScheduleProvider";
 import { FULL_UNLOCK_AFTER_H } from "@/config";
 import { useWalletBalances } from "@/components/wallet/useWalletBalances";
@@ -236,7 +237,11 @@ export function MooBotGuide() {
         <div className="relative shrink-0">
           <button
             type="button"
-            onClick={() => awake && play("flex", 700)}
+            onClick={() => {
+              if (!awake) return;
+              play("flex", 700);
+              playSfx("moo");
+            }}
             aria-label={awake ? "Tap MooBot" : "MooBot is sleeping"}
             className={`block rounded-2xl ${auraRing}`}
           >

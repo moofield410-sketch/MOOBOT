@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MooBotMascot, type MascotState } from "@/components/MooBotMascot";
+import { playSfx, primeSound } from "@/components/sound/engine";
+import { GameSoundButton } from "@/components/sound/SoundToggle";
 import { SOCIAL } from "@/config";
 import * as G from "@/lib/bloom-pop";
 
@@ -420,21 +422,28 @@ export function BloomPop() {
           game.particles.push({ ...p, vx: (Math.random() - 0.5) * 120, vy: -120 - Math.random() * 80, kind: grid.cells[gr][gc], t: 0, mode: "fall" });
           G.set(grid, gr, gc, G.EMPTY);
         }
+        playSfx("pop", group.length - 3);
+        if (dropped.length) playSfx("fall");
         const gained = group.length * 10 + dropped.length * 20;
         game.score += gained;
         const at = center(grid, r, c);
         game.floaters.push({ x: at.x, y: at.y, text: `+${gained}`, t: 0 });
         cheer();
-      } else if (++game.misses >= G.MISSES_PER_ROW) {
-        game.misses = 0;
-        game.crowFlap = 0.9;
-        G.pushRow(grid, kindsFor(game.level), game.rng);
+      } else {
+        playSfx("land");
+        if (++game.misses >= G.MISSES_PER_ROW) {
+          game.misses = 0;
+          game.crowFlap = 0.9;
+          playSfx("crow");
+          G.pushRow(grid, kindsFor(game.level), game.rng);
+        }
       }
 
       if (G.isEmpty(grid)) {
         game.score += 250 * game.level;
         setScore(game.score);
         setMood("happy");
+        playSfx("clear");
         setStatus("cleared");
         return;
       }
@@ -444,6 +453,7 @@ export function BloomPop() {
       if (center(grid, low, 0).y + R > DEADLINE) {
         clearTimeout(moodTimer.current);
         setMood("sleeping");
+        playSfx("over");
         setStatus("over");
         return;
       }
@@ -460,6 +470,7 @@ export function BloomPop() {
     const game = gameRef.current;
     if (statusRef.current !== "playing" || game.flying) return;
     game.flying = { x: LAUNCH.x, y: LAUNCH.y, vx: Math.cos(game.angle) * SPEED, vy: -Math.sin(game.angle) * SPEED, kind: game.current };
+    playSfx("launch");
   }, []);
 
   const swap = useCallback(() => {
@@ -480,6 +491,7 @@ export function BloomPop() {
         setDay(m === "daily" ? today : null);
         rng = m === "daily" ? G.seededRng(`bloom-pop:${today}`) : Math.random;
       }
+      primeSound();
       gameRef.current = newGame(nextLevel, keep, rng);
       setLevel(nextLevel);
       setScore(keep);
@@ -595,6 +607,7 @@ export function BloomPop() {
         <span>
           {mode === "daily" ? "Today's best" : "Best"} <span className="ml-1 font-mono text-base font-semibold tabular-nums text-soil">{best}</span>
         </span>
+        <GameSoundButton />
       </div>
 
       <div ref={wrapRef} className="relative w-full overflow-hidden rounded-2xl border border-line bg-milk" style={{ aspectRatio: `${W} / ${H}` }}>

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MooBotMascot, type MascotState } from "@/components/MooBotMascot";
+import { playSfx, primeSound } from "@/components/sound/engine";
+import { GameSoundButton } from "@/components/sound/SoundToggle";
 import { dailyFieldId, seededRng, type Rng } from "@/lib/bloom-pop";
 import * as P from "@/lib/pollen-path";
 
@@ -291,12 +293,14 @@ export function PollenPath() {
       limit: Math.hypot(target.x - from.x, target.y - from.y) + P.OVERSHOOT,
       missed: false,
     };
+    playSfx("dash");
   }, []);
 
   /** A fresh run on today's path. */
   const start = useCallback(() => {
     const today = dailyFieldId(Date.now());
     setDay(today);
+    primeSound();
     gameRef.current = newGame(seededRng(`pollen-path:${today}`));
     setScore(0);
     setCaught(false);
@@ -310,6 +314,7 @@ export function PollenPath() {
     const game = gameRef.current;
     game.dash = null;
     setCaught(true);
+    playSfx("catch");
     setMood("happy");
     setStatus("playing");
     canvasRef.current?.focus({ preventScroll: true });
@@ -368,6 +373,7 @@ export function PollenPath() {
                 game.puffs.push({ x: target.x, y: target.y, vx: Math.cos(a) * 70, vy: Math.sin(a) * 70, t: 0, color: j % 2 ? color : "#f2b705" });
               }
             }
+            playSfx("bloom", game.index);
             setScore(game.index);
             cheer();
             break;
@@ -376,6 +382,7 @@ export function PollenPath() {
             d.missed = true;
             clearTimeout(moodTimer.current);
             setMood("sleeping");
+            playSfx("miss");
             setStatus("over");
           }
         }
@@ -433,6 +440,7 @@ export function PollenPath() {
         <span>
           Today&apos;s best <span className="ml-1 font-mono text-base font-semibold tabular-nums text-soil">{best}</span>
         </span>
+        <GameSoundButton />
       </div>
 
       <div

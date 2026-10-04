@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { MooBotMascot } from "@/components/MooBotMascot";
+import { SoundToggle } from "@/components/sound/SoundToggle";
 import { CloseIcon, MenuIcon } from "@/components/ui/Icons";
 import { WalletMenu } from "@/components/wallet/WalletMenu";
 
@@ -89,20 +90,23 @@ export function Header() {
             </ul>
           </nav>
 
-          <div className="hidden lg:block">
-            <WalletMenu />
-          </div>
+          <div className="flex items-center gap-1 lg:gap-2">
+            <SoundToggle />
+            <div className="hidden lg:block">
+              <WalletMenu />
+            </div>
 
-          <button
-            type="button"
-            className="-mr-2 grid h-11 w-11 place-items-center text-soil lg:hidden"
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((o) => !o)}
-          >
-            {open ? <CloseIcon /> : <MenuIcon />}
-          </button>
+            <button
+              type="button"
+              className="-mr-2 grid h-11 w-11 place-items-center text-soil lg:hidden"
+              aria-expanded={open}
+              aria-controls="mobile-menu"
+              aria-label={open ? "Close menu" : "Open menu"}
+              onClick={() => setOpen((o) => !o)}
+            >
+              {open ? <CloseIcon /> : <MenuIcon />}
+            </button>
+          </div>
         </div>
       </header>
 
