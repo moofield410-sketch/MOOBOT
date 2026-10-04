@@ -38,6 +38,11 @@ export function FieldFundCard({
     <Card eyebrow="Field Fund" title="$CREDIT received by the MooBot agent" meta={credits} className="h-full">
       <p className="text-4xl font-bold text-grass">{formatCredits(c.receivedAtoms)}</p>
       <p className="mt-1 text-sm text-soil/70">Orbio $CREDIT received in total</p>
+      {c.waitingAtoms !== null && BigInt(c.waitingAtoms) > 0n && (
+        <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-grass/25 bg-grass/5 px-3 py-1 text-sm text-moss">
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-grass" />+{formatCredits(c.waitingAtoms)} accrued, not yet claimed
+        </p>
+      )}
 
       <div className="mt-6 space-y-4">
         <MeterRow label="Runs the agent (taken first)" pct={REWARDS.agentOpsPct} value={formatCredits(c.agentOpsAtoms)} />

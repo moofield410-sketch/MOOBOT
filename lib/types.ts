@@ -4,7 +4,7 @@ export type Address = `0x${string}`;
 export type Hash = `0x${string}`;
 
 /** "live" = real site data (for example, the Tournament's own records), even when empty. */
-export type DataSourceKind = "mock" | "chain" | "orbio" | "live" | "unavailable";
+export type DataSourceKind = "mock" | "chain" | "orbio" | "x" | "live" | "unavailable";
 
 /** Every data card is backed by one of these, so it can show "last updated" and a stale warning. */
 export interface DataEnvelope<T> {
@@ -155,6 +155,8 @@ export interface WalletBalances {
 /** Orbio $CREDIT received by the MooBot agent and its 20/80 split. Amounts are atom strings (6 decimals). */
 export interface CreditStats {
   receivedAtoms: string;
+  /** Accrued to the agent but not yet claimed (Orbio credit.owedAtoms). null when Orbio has no value. */
+  waitingAtoms: string | null;
   agentOpsAtoms: string;
   treasuryAtoms: string;
 }

@@ -8,7 +8,8 @@ import { MastersMarquee } from "@/components/home/MastersMarquee";
 import { MooBotMascot } from "@/components/MooBotMascot";
 import { CountUp } from "@/components/motion/CountUp";
 import { MeetMooBot } from "@/components/MeetMooBot";
-import { OfficialMooBotCard } from "@/components/moobot/OfficialMooBotCard";
+import { MooBotLive } from "@/components/moobot/MooBotLive";
+import { XFeed } from "@/components/home/XFeed";
 import { NoPitchesYet } from "@/components/tournament/EmptyStates";
 import { VoteButton } from "@/components/tournament/VoteButton";
 import { TournamentValue } from "@/components/TournamentValue";
@@ -25,6 +26,7 @@ import { getCreditMarket } from "@/lib/credit-market";
 import { getCredits } from "@/lib/credits";
 import { CREDIT } from "@/lib/rewards";
 import { formatCompact, formatUtcDateTime } from "@/lib/format";
+import { getMooBot } from "@/lib/moobot";
 import { getMasters } from "@/lib/registry";
 import { getLeaderboard, getPitches } from "@/lib/tournament";
 
@@ -66,7 +68,7 @@ const FAQ: FaqItem[] = [
 ];
 
 export default async function HomePage() {
-  const [masters, credits] = await Promise.all([getMasters(), getCredits()]);
+  const [masters, credits, moobot] = await Promise.all([getMasters(), getCredits(), getMooBot()]);
   const pitches = getPitches();
   const leaderboard = getLeaderboard();
   const market = getCreditMarket();
@@ -97,6 +99,11 @@ export default async function HomePage() {
           <StatTile bare label="Next unlock" value={<NextUnlockValue />} hint={<NextUnlockLabel />} />
         </div>
       </section>
+
+      {/* $MOOBOT Live: fills in by itself once the contract is confirmed on Orbio */}
+      <div data-reveal>
+        <MooBotLive initial={moobot} />
+      </div>
 
       {/* How it works: an idea grows from seed to bloom, joined by a thin furrow line */}
       <section aria-labelledby="how-it-works">
@@ -163,15 +170,13 @@ export default async function HomePage() {
           </div>
 
           <p className="mt-8 max-w-lg border-t border-line pt-4 text-xs text-fern">
-            Just for fun. Your best score stays in this browser and never earns or unlocks anything.
+            Just for fun. Your best score stays in this browser, has no value and never unlocks anything.
           </p>
         </div>
       </section>
 
-      {/* Schedule and the official contract, side by side */}
-      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]" data-reveal-stagger>
+      <div data-reveal>
         <LaunchTimeline />
-        <OfficialMooBotCard stacked />
       </div>
 
       {/* Masters marquee */}
@@ -235,6 +240,8 @@ export default async function HomePage() {
         </Card>
         <FieldFundCard credits={credits} history={market.data?.history ?? null} compact />
       </section>
+
+      <XFeed />
 
       <MeetMooBot />
 

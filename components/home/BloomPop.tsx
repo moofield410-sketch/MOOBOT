@@ -8,7 +8,7 @@ import * as G from "@/lib/bloom-pop";
  * Bloom Pop: a seed shooter on the home page. MooBot balances a seed on his head; aim and launch it
  * into the meadow. Three or more seeds of one kind bloom and pop, and anything left hanging falls.
  * Crowley the crow perches on the branch at the top: every few shots that pop nothing, he drops a
- * new row. Just for fun: the best score stays in this browser and never earns anything.
+ * new row. Just for fun: the best score stays in this browser and has no value.
  * Grid logic lives in lib/bloom-pop.ts; this file is input, physics and drawing only.
  */
 

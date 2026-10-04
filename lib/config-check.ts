@@ -6,6 +6,7 @@ import {
   HOLDER_AURA_TIERS,
   MOOBOT_TOKEN,
   REWARDS,
+  SOCIAL,
   USE_MOCK_DATA,
 } from "@/config";
 
@@ -67,6 +68,7 @@ export function missingConfirmItems(): string[] {
   if (CONTRACTS.launchpad.length === 0) missing.push("CONTRACTS.launchpad (not published by Orbio)");
   if (!process.env[MOOBOT_TOKEN.env]?.trim()) missing.push(`${MOOBOT_TOKEN.env} (env, set on launch day)`);
   if (REWARDS.roundPoolCapCredits === null) missing.push("REWARDS.roundPoolCapCredits");
+  if (!SOCIAL.x) missing.push("SOCIAL.x (the official X account, for the footer and the From X section)");
   return missing;
 }
 

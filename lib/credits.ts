@@ -11,12 +11,12 @@ import type { CreditStats, DataEnvelope, TreasuryState } from "@/lib/types";
  * credit.claimedAtoms: Orbio documents that claimAgentCredit sends accrued $CREDIT to the agent
  * wallet. "Unavailable" until $MOOBOT is verified (lib/moobot.ts). Numbers are never invented.
  */
-async function receivedAtoms(): Promise<{ value: bigint; source: "mock" | "orbio" } | null> {
-  if (USE_MOCK_DATA) return { value: credits(SAMPLE_TOTAL_CREDITS), source: "mock" };
+async function receivedAtoms(): Promise<{ value: bigint; waiting: string | null; source: "mock" | "orbio" } | null> {
+  if (USE_MOCK_DATA) return { value: credits(SAMPLE_TOTAL_CREDITS), waiting: null, source: "mock" };
   const moobot = await getMooBot();
   if (moobot.status !== "verified") return null;
   const claimed = moobot.agent.creditClaimedAtoms;
-  return claimed ? { value: BigInt(claimed), source: "orbio" } : null;
+  return claimed ? { value: BigInt(claimed), waiting: moobot.agent.creditOwedAtoms, source: "orbio" } : null;
 }
 
 export async function getCredits(): Promise<DataEnvelope<CreditStats>> {
@@ -25,7 +25,12 @@ export async function getCredits(): Promise<DataEnvelope<CreditStats>> {
     if (!received) return { value: null, source: "unavailable" };
     const split = splitReceived(received.value);
     return {
-      value: { receivedAtoms: received.value.toString(), agentOpsAtoms: split.agentOps.toString(), treasuryAtoms: split.treasury.toString() },
+      value: {
+        receivedAtoms: received.value.toString(),
+        waitingAtoms: received.waiting,
+        agentOpsAtoms: split.agentOps.toString(),
+        treasuryAtoms: split.treasury.toString(),
+      },
       source: received.source,
     };
   }) as Promise<DataEnvelope<CreditStats>>;
