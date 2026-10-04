@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 import { MooBotMascot, type MascotState } from "@/components/MooBotMascot";
 import { AURA_RING } from "@/components/moobot/aura";
+import { MooBotChat } from "@/components/moobot/MooBotChat";
 import { playSfx } from "@/components/sound/engine";
 import { useSchedule } from "@/components/ScheduleProvider";
 import { FULL_UNLOCK_AFTER_H } from "@/config";
@@ -33,9 +34,9 @@ interface Pos {
   y: number;
 }
 
-/** Not synced → thinking, asleep → sleeping, wave → happy, flex/tap → talking, otherwise idle. */
-function Mascot({ gesture, awake, synced, size }: { gesture: Gesture; awake: boolean; synced: boolean; size: number }) {
-  const state: MascotState = !synced ? "thinking" : !awake ? "sleeping" : gesture === "wave" ? "happy" : gesture === "flex" ? "talking" : "idle";
+/** Not synced or answering a chat question → thinking, asleep → sleeping, wave → happy, flex/tap → talking, otherwise idle. */
+function Mascot({ gesture, awake, synced, size, thinking = false }: { gesture: Gesture; awake: boolean; synced: boolean; size: number; thinking?: boolean }) {
+  const state: MascotState = !synced || thinking ? "thinking" : !awake ? "sleeping" : gesture === "wave" ? "happy" : gesture === "flex" ? "talking" : "idle";
   return <MooBotMascot state={state} size={size} decorative />;
 }
 
@@ -61,6 +62,7 @@ export function MooBotGuide() {
   const [collapsed, setCollapsed] = useState(false);
   const [gesture, setGesture] = useState<Gesture>("idle");
   const [mastersCount, setMastersCount] = useState<{ n: number; mock: boolean } | null>(null);
+  const [thinking, setThinking] = useState(false);
   const gestureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const play = useCallback((g: Gesture, ms: number) => {
@@ -245,7 +247,7 @@ export function MooBotGuide() {
             aria-label={awake ? "Tap MooBot" : "MooBot is sleeping"}
             className={`block rounded-2xl ${auraRing}`}
           >
-            <Mascot gesture={gesture} awake={awake} synced={synced} size={64} />
+            <Mascot gesture={gesture} awake={awake} synced={synced} size={64} thinking={thinking} />
           </button>
         </div>
 
@@ -294,6 +296,8 @@ export function MooBotGuide() {
           )}
         </div>
       </div>
+
+      <MooBotChat onThinking={setThinking} />
     </div>
   );
 }

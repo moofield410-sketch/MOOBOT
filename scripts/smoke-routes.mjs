@@ -97,6 +97,11 @@ const PAGES = [
   ["/", 200, "1,152"],
   ["/", 200, "New agents launched per day"],
   ["/credits", 200, "Paid to agents as gateway balance"],
+  // MooBot chat and auto-posts: off and preview without a key (the default).
+  ["/status", 200, "Talk to MooBot"],
+  ["/status", 200, "Preview (drafts only)"],
+  ["/docs/faq", 200, "Can I chat with MooBot?"],
+  ["/privacy", 200, "Chatting with MooBot"],
   ["/tournament/recaps", 200, "No recaps yet"],
   ["/tournament/recaps/1", 404, "Page not found"],
   ["/play/2026-10-04/1240", 200, "1,240"],
@@ -256,6 +261,19 @@ await runSite("MOOBOT_TOKEN_ADDRESS empty", 3199, {}, async ({ base, page, expec
 
   await expectJson("/api/moobot", (b) => (b.status === "not-launched" && Object.keys(b).length === 1 ? null : "expected exactly {status: not-launched}"));
   await expectJson("/api/moobot/chart?range=1h", (b) => (b.status === "off" && Object.keys(b).length === 1 ? null : "expected exactly {status: off}"));
+  await expectJson("/api/moobot/chat", (b) => (b.enabled === false ? null : "expected the chat off without a key"));
+  // The day's Bloom Pop board picture (for the daily post) is a PNG; future days don't exist.
+  const today = new Date().toISOString().slice(0, 10);
+  const board = await fetch(`${base}/play/${today}/board`);
+  if (board.status !== 200 || !board.headers.get("content-type")?.startsWith("image/png")) {
+    failures.push(`MOOBOT_TOKEN_ADDRESS empty: board image returned ${board.status} ${board.headers.get("content-type")}`);
+    console.log("✖ /play/…/board");
+  } else console.log("✔ /play/…/board");
+  const future = await fetch(`${base}/play/2999-01-01/board`);
+  if (future.status !== 404) {
+    failures.push(`MOOBOT_TOKEN_ADDRESS empty: a future board returned ${future.status}`);
+    console.log("✖ /play/2999-01-01/board");
+  } else console.log("✔ /play/2999-01-01/board");
   // The Bloom Pop score card (the preview image for shared scores) is a real PNG.
   const card = await fetch(`${base}/play/2026-10-04/1240/opengraph-image`);
   if (card.status !== 200 || !card.headers.get("content-type")?.startsWith("image/png")) {

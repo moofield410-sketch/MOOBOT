@@ -24,3 +24,8 @@
 # Netlify only runs schedules on the published production deploy.
 [functions."refresh-orbio"]
   schedule = "*/3 * * * *"
+
+# Auto-posting to @M00FIELD: netlify/functions/autopost.mjs calls /api/cron/autopost.
+# AUTO_POST decides what it does (off, preview = drafts only, on = posts). See lib/autopost/run.ts.
+[functions."autopost"]
+  schedule = "*/15 * * * *"

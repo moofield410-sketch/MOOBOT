@@ -150,6 +150,15 @@ export function snapCell(g: Grid, x: number, y: number, radius: number, top: num
   return best;
 }
 
+/** Rows of seeds a level starts with. */
+export function rowsFor(level: number) {
+  return Math.min(4 + level, 10);
+}
+/** Seed kinds in play on a level (level 1 leaves one out, to start easy). */
+export function kindsFor(level: number) {
+  return level === 1 ? 4 : SEED_KINDS;
+}
+
 /** Shots in a row that pop nothing before Crowley the crow drops a new row. */
 export const MISSES_PER_ROW = 5;
 
@@ -181,6 +190,18 @@ export function seededRng(seed: string): Rng {
 
 /** The daily field's id: the UTC date, YYYY-MM-DD. */
 export const dailyFieldId = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/** The daily field's starting board for a day: exactly what every visitor sees on level 1. */
+export function dailyBoard(day: string): Grid {
+  return createGrid(rowsFor(1), kindsFor(1), seededRng(`bloom-pop:${day}`));
+}
+
+/** A real UTC day (YYYY-MM-DD) that has already started, or null. */
+export function parseDay(day: string, now = Date.now()): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const t = Date.parse(`${day}T00:00:00Z`);
+  return Number.isNaN(t) || dailyFieldId(t) !== day || t > now ? null : day;
+}
 
 /** Share links carry a self-reported score; anything outside this range is rejected. */
 export const MAX_SHARE_SCORE = 9_999_999;

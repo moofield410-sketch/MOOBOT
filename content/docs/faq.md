@@ -44,6 +44,14 @@ Tapping MooBot plays a little flex animation. That's all, and it never gives any
 
 [[Live]] Once $MOOBOT is launched and confirmed, My Wallet and MooBot show a cosmetic aura based on your $MOOBOT balance: {{AURA_TIERS}}. It changes how MooBot looks and nothing else: no effect on voting power or rewards. Until then it shows "Not launched yet".
 
+## Can I chat with MooBot?
+
+When the chat is switched on, the floating MooBot shows "Ask MooBot a question". His answers are written by AI from these Docs and the site's live data, so they can be wrong: the Docs always win. He never gives financial advice, and he only ever shows the official $MOOBOT contract confirmed on Orbio. Each visitor can ask {{CHAT_PER_DAY}} questions a day. Never share a seed phrase or private key with anyone, MooBot included.
+
+## Who posts on {{X_HANDLE}}?
+
+The team, plus a few automatic posts written from the site's own data: the launch announcement, the daily Bloom Pop field, a daily numbers recap and a welcome for each newly graduated Master. Automatic posts never contain links, so a post with a link that claims to be automatic isn't ours.
+
 ## Why do some figures say n/a?
 
 Because the data isn't available, and the site never invents numbers. Orbio doesn't publish holders, volume or liquidity yet, and the treasury figures appear once the official $MOOBOT contract is confirmed on Orbio. Tap the small info icon next to any n/a to see why.

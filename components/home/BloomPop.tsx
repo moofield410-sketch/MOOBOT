@@ -51,12 +51,7 @@ type Game = {
   rng: G.Rng;
 };
 
-function rowsFor(level: number) {
-  return Math.min(4 + level, 10);
-}
-function kindsFor(level: number) {
-  return level === 1 ? 4 : G.SEED_KINDS;
-}
+const { rowsFor, kindsFor } = G;
 
 function pickKind(game: Pick<Game, "grid" | "level" | "rng">) {
   const kinds = G.kindsInGrid(game.grid);

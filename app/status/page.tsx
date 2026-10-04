@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Card, PageHeader } from "@/components/ui/Card";
 import { StatRow } from "@/components/ui/Stats";
+import { GATEWAY } from "@/config";
+import { autoPostStatus } from "@/lib/autopost/run";
 import { formatInt, formatUpdated } from "@/lib/format";
+import { chatEnabled, chatSpendToday } from "@/lib/moobot-chat";
 import { getStatus } from "@/lib/status";
 import type { SystemStatus } from "@/lib/types";
 
@@ -32,8 +35,11 @@ function StatusPill({ tone, children }: { tone: "good" | "warn" | "off"; childre
   return <span className={`chip ${cls}`}>{children}</span>;
 }
 
+const AUTO_POST_LABEL = { off: "Off", preview: "Preview (drafts only)", on: "On" } as const;
+
 export default async function StatusPage() {
-  const s = await getStatus();
+  const [s, autopost, chatSpend] = await Promise.all([getStatus(), autoPostStatus(), chatSpendToday()]);
+  const chatOn = chatEnabled();
   // A missing RPC_URL only affects wallet balances, so it isn't reported as "delayed".
   const health: Health =
     s.mode === "mock"
@@ -132,7 +138,73 @@ export default async function StatusPage() {
             </p>
           )}
         </Card>
+
+        <Card title="Talk to MooBot">
+          <dl>
+            <StatRow label="Chat" value={<StatusPill tone={chatOn ? "good" : "off"}>{chatOn ? "On" : "Off"}</StatusPill>} />
+            <StatRow label="Spent today (UTC)" value={`$${chatSpend.toFixed(2)} of $${GATEWAY.chat.dailyBudgetUsd.toFixed(2)}`} />
+            <StatRow label="Questions per visitor" value={`${GATEWAY.chat.perVisitorPerDay} a day`} />
+          </dl>
+          {!chatOn && <p className="mt-3 text-sm text-soil/80">Turns on with MOOBOT_CHAT=on and ORBIO_API_KEY set.</p>}
+        </Card>
       </div>
+
+      <Card title="Auto-posts to @M00FIELD">
+        <dl>
+          <StatRow
+            label="Auto-post"
+            value={<StatusPill tone={autopost.mode === "on" ? "good" : autopost.mode === "preview" ? "warn" : "off"}>{AUTO_POST_LABEL[autopost.mode]}</StatusPill>}
+          />
+          <StatRow label="Posts today (UTC)" value={`${autopost.postsToday} of ${GATEWAY.autopost.postsPerDay}`} />
+          <StatRow label="Last run" value={autopost.lastRunAt ? formatUpdated(autopost.lastRunAt).replace("Updated ", "") : "Not yet"} />
+          {autopost.lastError && <StatRow label="Last problem" value={<span className="text-sm font-normal">{autopost.lastError}</span>} />}
+        </dl>
+        {autopost.mode === "on" && !autopost.keySet && <p className="mt-3 text-sm text-moss">Auto-post is on but ORBIO_API_KEY is not set, so nothing can be posted.</p>}
+
+        {autopost.recent.length > 0 && (
+          <>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-fern">Recent posts</p>
+            <ul className="mt-2 space-y-1.5 text-sm">
+              {autopost.recent.map((p) => (
+                <li key={p.key} className="flex flex-wrap justify-between gap-2">
+                  <span className="font-mono text-xs text-soil">{p.key}</span>
+                  <span className="text-xs text-fern">
+                    {formatUpdated(p.at).replace("Updated ", "")} ·{" "}
+                    {p.url ? (
+                      <a href={p.url} target="_blank" rel="noopener noreferrer" className="link">
+                        view on X
+                      </a>
+                    ) : (
+                      p.status
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {autopost.mode === "preview" && (
+          <>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-fern">Drafts (what would be posted)</p>
+            {autopost.drafts.length === 0 ? (
+              <p className="mt-2 text-sm text-soil/80">No drafts yet. They appear here after the next 15-minute run.</p>
+            ) : (
+              <ul className="mt-3 grid gap-3 md:grid-cols-2">
+                {autopost.drafts.map((d) => (
+                  <li key={d.key} className="rounded-xl border border-line bg-hay/40 p-4">
+                    <p className="whitespace-pre-line break-words text-sm text-soil">{d.text}</p>
+                    <p className="mt-2 font-mono text-[11px] text-fern">
+                      {d.key}
+                      {d.media?.length ? " · with image" : ""} · {d.text.length}/280
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </Card>
 
       {isDev && (s.configErrors.length > 0 || s.missingConfirm.length > 0) && (
         <Card eyebrow="Development only" title="Configuration">

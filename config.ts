@@ -147,6 +147,44 @@ export const ORBIO_LINKS = {
   liveTerms: "https://www.orbio.so/api/protocol/agents/terms",
 } as const;
 
+/**
+ * Orbio's gateway (https://www.orbio.so/launchpad/docs.md): AI models and tools, paid from the
+ * owner's Orbio balance with ORBIO_API_KEY (server-only secret). Used by the "Talk to MooBot" chat
+ * (MOOBOT_CHAT=on) and by auto-posting to X (AUTO_POST=off|preview|on). Every call has a hard cap.
+ */
+export const GATEWAY = {
+  keyEnv: "ORBIO_API_KEY",
+  /** ORBIO_GATEWAY_BASE_URL (server-only) overrides this, so tests and local checks can use a stub. */
+  baseUrl: (typeof process !== "undefined" && process.env.ORBIO_GATEWAY_BASE_URL) || "https://api.orbio.so/api/v1",
+  timeoutMs: 25_000,
+  chat: {
+    env: "MOOBOT_CHAT",
+    model: "anthropic/claude-haiku-4.5",
+    /** US dollars per token (Orbio's model catalogue, checked 2026-10-04). One $CREDIT is one dollar. */
+    pricePerInputToken: 0.000001,
+    pricePerOutputToken: 0.000005,
+    /** Hard daily cap on chat spending, reset at 00:00 UTC. */
+    dailyBudgetUsd: 3,
+    perVisitorPerDay: 10,
+    maxInputChars: 500,
+    /** Messages of history sent with each question (visitor and MooBot together). */
+    maxTurns: 6,
+    maxTokens: 350,
+    temperature: 0.3,
+  },
+  autopost: {
+    env: "AUTO_POST",
+    /** Most one X post may cost, in $CREDIT. A post without a link is quoted at about 0.0187. */
+    postMaxCost: "0.03",
+    postsPerDay: 8,
+    graduationsPerDay: 5,
+    /** UTC hour after which the daily recap goes out. */
+    recapHourUtc: 12,
+    /** Minutes past 00:00 UTC after which the daily Bloom Pop board goes out. */
+    boardAfterMinutes: 5,
+  },
+} as const;
+
 /** On-chain graduation log scanning. Unused while no launchpad contract is published. */
 export const GRADUATION = {
   rule: "event" as "event" | "curve" | "dexPair",
