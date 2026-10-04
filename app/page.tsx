@@ -11,6 +11,7 @@ import { MooBotMascot } from "@/components/MooBotMascot";
 import { CountUp } from "@/components/motion/CountUp";
 import { MeetMooBot } from "@/components/MeetMooBot";
 import { MooBotLive } from "@/components/moobot/MooBotLive";
+import { OrbioTotalsCard } from "@/components/OrbioTotals";
 import { XFeed } from "@/components/home/XFeed";
 import { NoPitchesYet } from "@/components/tournament/EmptyStates";
 import { VoteButton } from "@/components/tournament/VoteButton";
@@ -30,6 +31,7 @@ import { getCredits } from "@/lib/credits";
 import { CREDIT } from "@/lib/rewards";
 import { formatCompact, formatUtcDateTime } from "@/lib/format";
 import { getMooBot } from "@/lib/moobot";
+import { getOrbioTotals } from "@/lib/orbio-totals";
 import { getMasters } from "@/lib/registry";
 import { masterOfTheDay } from "@/lib/spotlight";
 import { getLeaderboard, getPitches } from "@/lib/tournament";
@@ -72,7 +74,7 @@ const FAQ: FaqItem[] = [
 ];
 
 export default async function HomePage() {
-  const [masters, credits, moobot] = await Promise.all([getMasters(), getCredits(), getMooBot()]);
+  const [masters, credits, moobot, orbioTotals] = await Promise.all([getMasters(), getCredits(), getMooBot(), getOrbioTotals()]);
   const pitches = getPitches();
   const leaderboard = getLeaderboard();
   const market = await getCreditMarket();
@@ -108,6 +110,11 @@ export default async function HomePage() {
       {/* $MOOBOT Live: fills in by itself once the contract is confirmed on Orbio */}
       <div data-reveal>
         <MooBotLive initial={moobot} />
+      </div>
+
+      {/* Orbio at a glance: every agent on the launchpad, live today */}
+      <div data-reveal>
+        <OrbioTotalsCard totals={orbioTotals} compact />
       </div>
 
       {/* How it works: an idea grows from seed to bloom, joined by a thin furrow line */}

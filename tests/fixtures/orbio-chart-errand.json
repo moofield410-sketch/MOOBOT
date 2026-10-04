@@ -1,0 +1,38 @@
+{
+  "token": "0xeb2ecf641a1f04b8df37c24eabca8f5a47cfaacb",
+  "range": "1h",
+  "enabled": [
+    "1h",
+    "4h",
+    "1d"
+  ],
+  "trackedSince": "2026-09-30T05:46:00+00:00",
+  "bucketSeconds": 60,
+  "points": [
+    {
+      "at": "2026-10-04T09:25:00+00:00",
+      "priceMicroUsd": "840",
+      "marketCapMicroUsd": "840452319358"
+    },
+    {
+      "at": "2026-10-04T09:26:00+00:00",
+      "priceMicroUsd": "842",
+      "marketCapMicroUsd": "842469065801"
+    },
+    {
+      "at": "2026-10-04T09:27:00+00:00",
+      "priceMicroUsd": "844",
+      "marketCapMicroUsd": "844494939075"
+    },
+    {
+      "at": "2026-10-04T09:28:00+00:00",
+      "priceMicroUsd": "840",
+      "marketCapMicroUsd": "840221260886"
+    },
+    {
+      "at": "2026-10-04T09:29:00+00:00",
+      "priceMicroUsd": "839",
+      "marketCapMicroUsd": "839810256289"
+    }
+  ]
+}

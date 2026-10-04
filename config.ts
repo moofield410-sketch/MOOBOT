@@ -130,6 +130,12 @@ export const ORBIO_API = {
   timeoutMs: 10_000,
   /** Parallel per-agent confirmation requests. */
   confirmConcurrency: 4,
+  /** Orbio-wide totals (/agents/analytics): reused for 5 minutes, flagged stale after an hour. */
+  analyticsTtlMs: 5 * 60_000,
+  analyticsStaleMs: 60 * 60_000,
+  /** $MOOBOT price chart: Orbio samples once a minute, so it is re-read once a minute. */
+  chartTtlMs: 60_000,
+  chartStaleMs: 30 * 60_000,
 } as const;
 
 export const ORBIO_LINKS = {

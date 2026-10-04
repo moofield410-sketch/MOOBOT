@@ -1,0 +1,49 @@
+{
+  "live": true,
+  "chainId": 4663,
+  "vault": "0x0e1651aec67b2a049a4fa6aeb6c1c305aabfc35b",
+  "orbioMicroUsd": "109942",
+  "totals": {
+    "agents": "1152",
+    "stakedWei": "2156791130009153945860431",
+    "treasuryWei": "285950314466913345995441",
+    "principalWei": "876521233682814090114913",
+    "withdrawnWei": "1280269896326339855745518",
+    "creatorFeesWei": "4059294216300500749354039",
+    "convertedOrbioWei": "1616552771824433457498167",
+    "creditEarnedAtoms": "170250586",
+    "convertedUsdgAtoms": "96139559424",
+    "creditClaimedAtoms": "75259363",
+    "creditActivatedAtoms": "75259363",
+    "pendingConversionWei": "0"
+  },
+  "indexedThrough": "79823327",
+  "days": [
+    {
+      "day": "2026-10-02",
+      "harvestedWei": "581362411882667546451825",
+      "stakedWei": "290681205941333773225900",
+      "creditAtoms": "15316969787",
+      "usdgAtoms": "4325310029",
+      "launches": 168
+    },
+    {
+      "day": "2026-10-03",
+      "harvestedWei": "439838131824147784720551",
+      "stakedWei": "219919065912073892360260",
+      "creditAtoms": "12456087496",
+      "usdgAtoms": "3743163409",
+      "launches": 306
+    },
+    {
+      "day": "2026-10-04",
+      "harvestedWei": "207833052954895895519472",
+      "stakedWei": "103916526477447947759724",
+      "creditAtoms": "6829846798",
+      "usdgAtoms": "2061438110",
+      "launches": 50
+    }
+  ],
+  "marketCapMicroUsd": "16481641285573",
+  "pricedAgents": 1152
+}

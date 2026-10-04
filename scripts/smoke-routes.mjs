@@ -17,10 +17,15 @@ const STUB_PORT = 3198;
 
 const FIXTURE = JSON.parse(readFileSync("tests/fixtures/orbio-api.json", "utf8"));
 const ERRAND = JSON.parse(readFileSync("tests/fixtures/orbio-agent-errand.json", "utf8"));
+const ANALYTICS = JSON.parse(readFileSync("tests/fixtures/orbio-analytics.json", "utf8"));
+const CHART = JSON.parse(readFileSync("tests/fixtures/orbio-chart-errand.json", "utf8"));
 const [GRADUATED, MISMATCH, NOT_GRADUATED] = FIXTURE.list.data;
 const UNKNOWN_TOKEN = "0x0000000000000000000000000000000000000001";
 
-/** Local Orbio stub: GET /api/protocol/agents (list, ?wallet=) and /api/protocol/agents/{id or token}. */
+/**
+ * Local Orbio stub: GET /api/protocol/agents (list, ?wallet=), /agents/{id or token},
+ * /agents/analytics and /agents/{token}/chart?range=.
+ */
 const stub = createServer((req, res) => {
   const u = new URL(req.url ?? "/", `http://127.0.0.1:${STUB_PORT}`);
   const send = (status, body) => {
@@ -32,6 +37,14 @@ const stub = createServer((req, res) => {
     const offset = Number(u.searchParams.get("offset") ?? 0);
     const data = w ? FIXTURE.list.data.filter((a) => a.owner === w || a.agentWallet === w) : offset === 0 ? FIXTURE.list.data : [];
     return send(200, { ...FIXTURE.list, data, page: { limit: 200, offset, total: w ? data.length : FIXTURE.list.page.total } });
+  }
+  if (u.pathname === "/api/protocol/agents/analytics") return send(200, ANALYTICS);
+  const chartOf = u.pathname.match(/^\/api\/protocol\/agents\/([^/]+)\/chart$/)?.[1]?.toLowerCase();
+  if (chartOf) {
+    const range = u.searchParams.get("range");
+    if (!["1h", "4h", "1d"].includes(range)) return send(400, { error: "range must be one of 1h, 4h, 1d." });
+    if (chartOf === ERRAND.token) return send(200, { ...CHART, range });
+    return send(200, { token: chartOf, range, enabled: [], trackedSince: null, bucketSeconds: 60, points: [] });
   }
   const id = u.pathname.match(/^\/api\/protocol\/agents\/([^/]+)$/)?.[1]?.toLowerCase();
   if (id === ERRAND.token) return send(200, ERRAND);
@@ -79,6 +92,11 @@ const PAGES = [
   ["/", 200, "Official updates"],
   ["/", 200, "Pollen Path"],
   ["/", 200, "@M00FIELD"],
+  // Orbio at a glance: live before $MOOBOT launches (recorded analytics: 1,152 agents).
+  ["/", 200, "Orbio at a glance"],
+  ["/", 200, "1,152"],
+  ["/", 200, "New agents launched per day"],
+  ["/credits", 200, "Paid to agents as gateway balance"],
   ["/tournament/recaps", 200, "No recaps yet"],
   ["/tournament/recaps/1", 404, "Page not found"],
   ["/play/2026-10-04/1240", 200, "1,240"],
@@ -237,6 +255,7 @@ await runSite("MOOBOT_TOKEN_ADDRESS empty", 3199, {}, async ({ base, page, expec
   for (const m of agents.data) await page(`/masters/${m.tokenAddress}`, 200, [m.name, "Orbio doesn&#x27;t publish this yet."], noMooBotNumbers);
 
   await expectJson("/api/moobot", (b) => (b.status === "not-launched" && Object.keys(b).length === 1 ? null : "expected exactly {status: not-launched}"));
+  await expectJson("/api/moobot/chart?range=1h", (b) => (b.status === "off" && Object.keys(b).length === 1 ? null : "expected exactly {status: off}"));
   // The Bloom Pop score card (the preview image for shared scores) is a real PNG.
   const card = await fetch(`${base}/play/2026-10-04/1240/opengraph-image`);
   if (card.status !== 200 || !card.headers.get("content-type")?.startsWith("image/png")) {
@@ -265,6 +284,14 @@ await runSite("MOOBOT_TOKEN_ADDRESS = errand (agent 106)", 3197, { MOOBOT_TOKEN_
       ? null
       : "expected verified errand with explorer link",
   );
+  for (const range of ["1h", "4h", "1d"]) {
+    await expectJson(`/api/moobot/chart?range=${range}`, (b) =>
+      b.status === "ok" && b.chart.range === range && b.chart.points.length === CHART.points.length && b.chart.points[0].priceMicroUsd === CHART.points[0].priceMicroUsd
+        ? null
+        : "expected errand's recorded price points",
+    );
+  }
+  await expectJson("/api/moobot/chart?range=1w", (b) => (typeof b.error === "string" ? null : "expected a range error"));
   await page("/credits", 200, ["Agent #106 · errand", "Staked", "Creator fees claimed", "Protocol fee", "$CREDIT owed", "$ORBIO", "live launch terms"], (html) =>
     html.includes("Not launched yet") ? ["still says Not launched yet"] : [],
   );
@@ -274,6 +301,7 @@ await runSite("MOOBOT_TOKEN_ADDRESS = errand (agent 106)", 3197, { MOOBOT_TOKEN_
 // 3. $MOOBOT set to an address Orbio doesn't know: clear warning, features stay off.
 await runSite("MOOBOT_TOKEN_ADDRESS not on Orbio", 3196, { MOOBOT_TOKEN_ADDRESS: UNKNOWN_TOKEN }, async ({ page, expectJson }) => {
   await expectJson("/api/moobot", (b) => (b.status === "not-found" ? null : "expected not-found"));
+  await expectJson("/api/moobot/chart?range=1h", (b) => (b.status === "off" ? null : "expected the chart off"));
   await expectJson(`/api/wallet/${GRADUATED.owner}`, (b) => (b.data.moobot.status === "not-launched" && b.data.aura === null ? null : "expected $MOOBOT off"));
   await page("/status", 200, ["Warning: the configured $MOOBOT contract was rejected", "was not found on the Orbio API", "Address rejected (not on Orbio)"]);
   await page("/credits", 200, ["Not launched yet"]);

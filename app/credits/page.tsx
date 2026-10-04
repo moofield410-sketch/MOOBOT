@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FieldFundCard } from "@/components/FieldFund";
 import { MooBotAgentCard } from "@/components/moobot/MooBotAgentCard";
+import { OrbioTotalsCard } from "@/components/OrbioTotals";
 import { getMooBot } from "@/lib/moobot";
+import { getOrbioTotals } from "@/lib/orbio-totals";
 import { Card, ComingSoon, PageHeader } from "@/components/ui/Card";
 import { NotAvailable } from "@/components/ui/NotAvailable";
 import { NA_REASONS } from "@/lib/na-reasons";
@@ -20,7 +22,7 @@ export const metadata: Metadata = { title: "Credits" };
 const S = REWARDS.roundSplit;
 
 export default async function CreditsPage() {
-  const [credits, treasury, moobot] = await Promise.all([getCredits(), getTreasury(), getMooBot()]);
+  const [credits, treasury, moobot, orbioTotals] = await Promise.all([getCredits(), getTreasury(), getMooBot(), getOrbioTotals()]);
   const market = await getCreditMarket();
   const t = treasury.data;
   const pool = t?.poolAtoms ? BigInt(t.poolAtoms) : null;
@@ -172,6 +174,8 @@ export default async function CreditsPage() {
           </ComingSoon>
         )}
       </section>
+
+      <OrbioTotalsCard totals={orbioTotals} />
     </div>
   );
 }

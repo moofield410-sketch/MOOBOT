@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { formatUnits } from "viem";
 import { MooBotMascot } from "@/components/MooBotMascot";
+import { MooBotPriceChart } from "@/components/moobot/MooBotPriceChart";
 import { useMooBot } from "@/components/moobot/useMooBot";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { NotAvailable } from "@/components/ui/NotAvailable";
@@ -15,7 +16,7 @@ import { formatCredits } from "@/lib/rewards";
 const VERIFY_HREF = "/docs/safety#how-to-verify-the-official-moobot-contract";
 
 /** What switches on by itself the moment the contract is confirmed on Orbio. */
-const SYSTEMS = ["Official contract", "Price and market cap", "Graduation tracker", "Field Fund $CREDIT", "Wallet balance and holder aura"];
+const SYSTEMS = ["Official contract", "Price and market cap", "Price chart", "Graduation tracker", "Field Fund $CREDIT", "Wallet balance and holder aura"];
 
 const na = <NotAvailable reason={NA_REASONS.orbioNull} />;
 const usd = (micro: string | null) => (micro === null ? na : formatMicroUsd(micro));
@@ -133,6 +134,8 @@ export function MooBotLive({ initial }: { initial: MooBotState }) {
           {agent ? credit(agent.creditClaimedAtoms) : "–"}
         </Tile>
       </div>
+
+      {agent && <MooBotPriceChart />}
 
       <div className="mt-6 grid gap-6 border-t border-line pt-6 lg:grid-cols-[1.5fr_1fr]">
         <div className="min-w-0">

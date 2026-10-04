@@ -33,6 +33,11 @@ export function formatCompact(n: number | string | null): string {
   return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v);
 }
 
+/** Decimals a chart tick needs to tell it from its neighbours (a step of 0.00002 needs 5). */
+export function stepDecimals(step: number): number {
+  return Math.max(0, -Math.floor(Math.log10(step) + 1e-9));
+}
+
 /** Server-rendered dates use UTC so markup is identical everywhere. */
 export function formatUtc(iso: string | null): string {
   if (!iso) return "never";

@@ -1,8 +1,16 @@
 import { getAddress } from "viem";
-import { CHAIN, HOLDER_AURA_TIERS, MOOBOT_TOKEN } from "@/config";
+import { CHAIN, HOLDER_AURA_TIERS, MOOBOT_TOKEN, ORBIO_API } from "@/config";
 import { cached } from "@/lib/cache";
 import { reportError } from "@/lib/monitoring";
-import { defaultFetcher, fetchAgentByToken, type Fetcher, type OrbioAgent } from "@/lib/sources/orbio-api";
+import {
+  defaultFetcher,
+  fetchAgentByToken,
+  fetchAgentChart,
+  type ChartRange,
+  type Fetcher,
+  type OrbioAgent,
+  type PriceChart,
+} from "@/lib/sources/orbio-api";
 import type { Address } from "@/lib/types";
 
 /**
@@ -107,6 +115,27 @@ export async function getMooBot(fetcher: Fetcher = defaultFetcher, now?: () => n
   if (env.data === null) return { status: "unverified", address, error: env.error ?? "Orbio could not be reached" };
   if (env.data === "not-found") return { status: "not-found", address };
   return { status: "verified", address, explorerUrl: explorerTokenUrl(address), agent: env.data, checkedAt: env.updatedAt, stale: env.stale };
+}
+
+export type MooBotChartState =
+  | { status: "off" }
+  | { status: "unavailable"; range: ChartRange }
+  | { status: "ok"; chart: PriceChart; checkedAt: string | null; stale: boolean };
+
+/**
+ * The $MOOBOT price chart. Off until the contract is verified (same switch as everything else),
+ * then Orbio's minute-by-minute price for the chosen range, cached for everyone.
+ */
+export async function getMooBotChart(range: ChartRange, fetcher: Fetcher = defaultFetcher, now?: () => number): Promise<MooBotChartState> {
+  const m = await getMooBot(fetcher, now);
+  if (m.status !== "verified") return { status: "off" };
+  const env = await cached<PriceChart>(
+    `moobot-chart:${m.address}:${range}`,
+    { ttlMs: ORBIO_API.chartTtlMs, staleMs: ORBIO_API.chartStaleMs, now },
+    async () => ({ value: await fetchAgentChart(m.address.toLowerCase() as Address, range, fetcher), source: "orbio" }),
+  );
+  if (env.data === null) return { status: "unavailable", range };
+  return { status: "ok", chart: env.data, checkedAt: env.updatedAt, stale: env.stale };
 }
 
 /** The holder aura tier for a raw $MOOBOT balance, or null below the first tier. Cosmetic only. */

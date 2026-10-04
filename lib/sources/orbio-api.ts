@@ -201,6 +201,83 @@ export function toMaster(a: OrbioAgent): Master {
   };
 }
 
+/** Orbio-wide totals from GET /agents/analytics. null means Orbio returned no value (n/a, never 0). */
+export interface OrbioTotals {
+  agents: number | null;
+  /** Every agent's market cap added up (micro-USD). */
+  marketCapMicroUsd: string | null;
+  /** $ORBIO price (micro-USD). */
+  orbioMicroUsd: string | null;
+  /** $ORBIO wei (18 decimals). */
+  stakedWei: string | null;
+  creatorFeesWei: string | null;
+  /** USDG atoms (6 decimals): the converted share credited to agents as gateway balance. */
+  convertedUsdgAtoms: string | null;
+  /** $CREDIT atoms (6 decimals). Orbio's field is creditEarnedAtoms; the site says "accrued". */
+  creditAccruedAtoms: string | null;
+  creditClaimedAtoms: string | null;
+  /** New agents per UTC day, oldest first (Orbio sends the last 30 days). */
+  launchesByDay: { day: string; launches: number }[];
+}
+
+export function parseAnalytics(raw: unknown): OrbioTotals {
+  const r = obj(raw);
+  const t = obj(r?.totals);
+  if (!r || !t) throw new Error("Orbio API: unexpected analytics shape");
+  // Orbio sends the count as a string here ("1152"); null or junk stays null, never 0.
+  const agents = /^\d+$/.test(String(t.agents ?? "")) ? Number(t.agents) : null;
+  const days = Array.isArray(r.days) ? r.days : [];
+  return {
+    agents,
+    marketCapMicroUsd: str(r.marketCapMicroUsd),
+    orbioMicroUsd: str(r.orbioMicroUsd),
+    stakedWei: str(t.stakedWei),
+    creatorFeesWei: str(t.creatorFeesWei),
+    convertedUsdgAtoms: str(t.convertedUsdgAtoms),
+    creditAccruedAtoms: str(t.creditEarnedAtoms),
+    creditClaimedAtoms: str(t.creditClaimedAtoms),
+    launchesByDay: days.flatMap((d) => {
+      const o = obj(d);
+      const day = str(o?.day);
+      return day && /^\d{4}-\d{2}-\d{2}$/.test(day) && typeof o?.launches === "number" ? [{ day, launches: o.launches }] : [];
+    }),
+  };
+}
+
+export async function fetchAnalytics(fetcher: Fetcher = defaultFetcher): Promise<OrbioTotals> {
+  return parseAnalytics(await fetcher(`${ORBIO_API.baseUrl}/agents/analytics`));
+}
+
+export const CHART_RANGES = ["1h", "4h", "1d"] as const;
+export type ChartRange = (typeof CHART_RANGES)[number];
+
+/** One agent's price history from GET /agents/{id}/chart. Orbio samples it every minute, with no backfill. */
+export interface PriceChart {
+  range: ChartRange;
+  /** When Orbio started recording this agent's price (ISO), or null if it hasn't yet. */
+  trackedSince: string | null;
+  /** Oldest first. Points without a price are dropped. */
+  points: { at: string; priceMicroUsd: string; marketCapMicroUsd: string | null }[];
+}
+
+export function parseChart(raw: unknown, range: ChartRange): PriceChart {
+  const r = obj(raw);
+  if (!r || !Array.isArray(r.points)) throw new Error("Orbio API: unexpected chart shape");
+  const points = r.points
+    .flatMap((p) => {
+      const o = obj(p);
+      const at = str(o?.at);
+      const price = str(o?.priceMicroUsd);
+      return at && price && Number.isFinite(Date.parse(at)) && /^\d+$/.test(price) ? [{ at, priceMicroUsd: price, marketCapMicroUsd: str(o?.marketCapMicroUsd) }] : [];
+    })
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  return { range, trackedSince: str(r.trackedSince), points };
+}
+
+export async function fetchAgentChart(token: Address, range: ChartRange, fetcher: Fetcher = defaultFetcher): Promise<PriceChart> {
+  return parseChart(await fetcher(`${ORBIO_API.baseUrl}/agents/${token}/chart?range=${range}`), range);
+}
+
 /** Last fetch details, shown on the Status page. */
 export interface OrbioFetchState {
   lastFetchAt: string | null;
