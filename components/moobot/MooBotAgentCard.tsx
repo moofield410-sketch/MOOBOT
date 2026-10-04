@@ -50,6 +50,7 @@ export function MooBotAgentCard({ moobot: initial }: { moobot: MooBotState }) {
         <StatRow label="Staked" value={orbioAmount(a.stakedWei)} />
         <StatRow label="Creator fees claimed" value={orbioAmount(a.claimedFeesWei)} />
         <StatRow label="Protocol fee" value={orbioAmount(a.protocolFeeWei)} />
+        <StatRow label="Gateway balance credited (from fees)" value={creditAmount(a.gatewayCreditAtoms)} />
         <StatRow label="$CREDIT owed (accrued, not yet claimed)" value={creditAmount(a.creditOwedAtoms)} />
         <StatRow label="$CREDIT claimed" value={creditAmount(a.creditClaimedAtoms)} />
         <StatRow label="$CREDIT minted (all time)" value={creditAmount(a.creditMintedAtoms)} />

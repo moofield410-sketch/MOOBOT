@@ -11,7 +11,7 @@ import { REWARDS } from "@/config";
 import type { MooBotAgent, MooBotState } from "@/lib/moobot";
 import { formatMicroUsd, formatUpdated } from "@/lib/format";
 import { NA_REASONS } from "@/lib/na-reasons";
-import { formatCredits } from "@/lib/rewards";
+import { formatCredits, receivedFrom } from "@/lib/rewards";
 
 const VERIFY_HREF = "/docs/safety#how-to-verify-the-official-moobot-contract";
 
@@ -20,7 +20,6 @@ const SYSTEMS = ["Official contract", "Price and market cap", "Price chart", "Gr
 
 const na = <NotAvailable reason={NA_REASONS.orbioNull} />;
 const usd = (micro: string | null) => (micro === null ? na : formatMicroUsd(micro));
-const credit = (atoms: string | null) => (atoms === null ? na : formatCredits(atoms));
 const orbio = (wei: string | null) =>
   wei === null ? na : Number(formatUnits(BigInt(wei), 18)).toLocaleString("en-US", { maximumFractionDigits: 0 });
 
@@ -79,6 +78,8 @@ export function MooBotLive({ initial }: { initial: MooBotState }) {
   const phase = phaseOf(m);
   const agent = m.status === "verified" ? m.agent : null;
   const badge = PHASE_BADGE[phase];
+  // Same total as the Field Fund card: gateway balance credited plus staking $CREDIT claimed.
+  const fieldFund = agent ? receivedFrom(agent) : null;
 
   return (
     <section aria-labelledby="moobot-live" className="card relative overflow-hidden p-6 sm:p-8">
@@ -131,7 +132,7 @@ export function MooBotLive({ initial }: { initial: MooBotState }) {
             )
           }
         >
-          {agent ? credit(agent.creditClaimedAtoms) : "–"}
+          {agent ? (fieldFund === null ? na : formatCredits(fieldFund)) : "–"}
         </Tile>
       </div>
 

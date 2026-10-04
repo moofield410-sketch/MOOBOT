@@ -312,6 +312,9 @@ await runSite("MOOBOT_TOKEN_ADDRESS = errand (agent 106)", 3197, { MOOBOT_TOKEN_
     );
   }
   await expectJson("/api/moobot/chart?range=1w", (b) => (typeof b.error === "string" ? null : "expected a range error"));
+  // Field Fund = gateway balance credited from fees (5,001.77) + staking $CREDIT claimed (0), on the home page too.
+  await page("/", 200, ["5,001.77", "Gateway balance from fees"]);
+  await page("/credits", 200, ["Gateway balance credited (from fees)", "5,001.77 $CREDIT"]);
   await page("/credits", 200, ["Agent #106 · errand", "Staked", "Creator fees claimed", "Protocol fee", "$CREDIT owed", "$ORBIO", "live launch terms"], (html) =>
     html.includes("Not launched yet") ? ["still says Not launched yet"] : [],
   );

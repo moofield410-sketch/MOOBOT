@@ -247,9 +247,21 @@ export function totalAllocated(p: RoundPayouts): bigint {
 }
 
 /** "1,234.5" from atoms (up to 2 decimals). */
+/**
+ * $CREDIT the MooBot agent has received (lib/credits.ts explains the two parts): the gateway
+ * balance Orbio credits from the converted fee share, plus staking $CREDIT claimed to its wallet.
+ * null when Orbio has neither figure.
+ */
+export function receivedFrom(agent: { gatewayCreditAtoms: string | null; creditClaimedAtoms: string | null }): bigint | null {
+  const parts = [agent.gatewayCreditAtoms, agent.creditClaimedAtoms].filter((v): v is string => v !== null && /^\d+$/.test(v));
+  return parts.length ? parts.reduce((sum, v) => sum + BigInt(v), 0n) : null;
+}
+
 export function formatCredits(atoms: bigint | string | null): string {
   if (atoms === null) return "n/a";
   const a = typeof atoms === "string" ? BigInt(atoms) : atoms;
+  // A real amount under one cent never reads as 0.
+  if (a > 0n && a * 100n < CREDIT) return "<0.01";
   const whole = a / CREDIT;
   const cents = ((a % CREDIT) * 100n) / CREDIT;
   return whole.toLocaleString("en-US") + (cents > 0n ? `.${cents.toString().padStart(2, "0").replace(/0$/, "")}` : "");

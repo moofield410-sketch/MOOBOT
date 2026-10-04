@@ -61,6 +61,8 @@ export interface MooBotAgent {
   creditOwedAtoms: string | null;
   creditClaimedAtoms: string | null;
   creditMintedAtoms: string | null;
+  /** Gateway balance credited from the converted fee share (USDG atoms, 6 decimals; one $CREDIT is one dollar). */
+  gatewayCreditAtoms: string | null;
 }
 
 export type MooBotState =
@@ -87,6 +89,7 @@ function toMooBotAgent(a: OrbioAgent): MooBotAgent {
     creditOwedAtoms: a.credit?.owedAtoms ?? null,
     creditClaimedAtoms: a.credit?.claimedAtoms ?? null,
     creditMintedAtoms: a.credit?.mintedAtoms ?? null,
+    gatewayCreditAtoms: a.converted?.usdgAtoms ?? null,
   };
 }
 

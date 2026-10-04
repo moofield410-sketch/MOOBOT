@@ -2,34 +2,41 @@ import { CACHE, REWARDS, USE_MOCK_DATA } from "@/config";
 import { cached } from "@/lib/cache";
 import { recordFieldFundTotal } from "@/lib/field-fund-history";
 import { getMooBot } from "@/lib/moobot";
-import { credits, roundPool, splitReceived } from "@/lib/rewards";
+import { credits, receivedFrom, roundPool, splitReceived } from "@/lib/rewards";
 import { SAMPLE_TOTAL_CREDITS } from "@/lib/sample/credits";
 import type { CreditStats, DataEnvelope, TreasuryState } from "@/lib/types";
 
 /**
  * Orbio $CREDIT received by the MooBot agent and its 20/80 split.
- * Preview mode: sample data. Real mode: the verified MooBot agent's Orbio record. "Received" is
- * credit.claimedAtoms: Orbio documents that claimAgentCredit sends accrued $CREDIT to the agent
- * wallet. "Unavailable" until $MOOBOT is verified (lib/moobot.ts). Numbers are never invented.
+ * Preview mode: sample data. Real mode: the verified MooBot agent's Orbio record. Orbio pays an
+ * agent two documented ways, and "received" is both added up:
+ * - gateway balance: the harvest sells the converted fee share for USDG and "credits it as the
+ *   agent's gateway balance"; "one $CREDIT is one dollar of balance" (converted.usdgAtoms);
+ * - staking $CREDIT: accrues in the vault, and claimAgentCredit sends it to the agent wallet
+ *   (credit.claimedAtoms; what's accrued but not claimed yet is credit.owedAtoms, shown apart).
+ * credit.mintedAtoms is not used: Orbio doesn't document it. The sum is receivedFrom() in
+ * lib/rewards.ts. "Unavailable" until $MOOBOT is verified (lib/moobot.ts). Numbers are never invented.
  */
-async function receivedAtoms(): Promise<{ value: bigint; waiting: string | null; source: "mock" | "orbio" } | null> {
-  if (USE_MOCK_DATA) return { value: credits(SAMPLE_TOTAL_CREDITS), waiting: null, source: "mock" };
+async function receivedAtoms(): Promise<
+  { value: bigint; waiting: string | null; gateway: string | null; claimed: string | null; source: "mock" | "orbio" } | null
+> {
+  if (USE_MOCK_DATA) return { value: credits(SAMPLE_TOTAL_CREDITS), waiting: null, gateway: null, claimed: null, source: "mock" };
   const moobot = await getMooBot();
   if (moobot.status !== "verified") return null;
-  const claimed = moobot.agent.creditClaimedAtoms;
-  if (!claimed) return null;
+  const value = receivedFrom(moobot.agent);
+  if (value === null) return null;
   // Each fresh read also feeds the automatic daily history (lib/field-fund-history.ts).
-  await recordFieldFundTotal(BigInt(claimed));
-  return { value: BigInt(claimed), waiting: moobot.agent.creditOwedAtoms, source: "orbio" };
+  await recordFieldFundTotal(value);
+  return { value, waiting: moobot.agent.creditOwedAtoms, gateway: moobot.agent.gatewayCreditAtoms, claimed: moobot.agent.creditClaimedAtoms, source: "orbio" };
 }
 
 /** For the scheduled refresh: records today's total even when nobody visits. Never throws. */
 export async function recordFieldFund(): Promise<"recorded" | "not-launched"> {
   if (USE_MOCK_DATA) return "not-launched";
   const moobot = await getMooBot();
-  const claimed = moobot.status === "verified" ? moobot.agent.creditClaimedAtoms : null;
-  if (!claimed) return "not-launched";
-  await recordFieldFundTotal(BigInt(claimed));
+  const value = moobot.status === "verified" ? receivedFrom(moobot.agent) : null;
+  if (value === null) return "not-launched";
+  await recordFieldFundTotal(value);
   return "recorded";
 }
 
@@ -42,6 +49,8 @@ export async function getCredits(): Promise<DataEnvelope<CreditStats>> {
       value: {
         receivedAtoms: received.value.toString(),
         waitingAtoms: received.waiting,
+        gatewayAtoms: received.gateway,
+        claimedAtoms: received.claimed,
         agentOpsAtoms: split.agentOps.toString(),
         treasuryAtoms: split.treasury.toString(),
       },

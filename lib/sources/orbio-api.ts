@@ -55,6 +55,12 @@ export interface OrbioAgent {
   credit: { mintedAtoms: string | null; owedAtoms: string | null; claimedAtoms: string | null } | null;
   /** In wei of the pair token ($ORBIO, 18 decimals). Only on the per-agent record. */
   stake: { stakedWei: string | null; claimedFeesWei: string | null; protocolFeeWei: string | null } | null;
+  /**
+   * The converted share of the agent's fees. Orbio: the harvest "sells the converted share for USDG
+   * and credits it as the agent's gateway balance", and "one $CREDIT is one dollar of balance".
+   * usdgAtoms has 6 decimals, like $CREDIT. Only on the per-agent record.
+   */
+  converted: { usdgAtoms: string | null } | null;
 }
 
 const str = (v: unknown) => (typeof v === "string" && v !== "" ? v : null);
@@ -73,6 +79,7 @@ export function parseAgent(raw: unknown): OrbioAgent | null {
   const curve = obj(r.curve);
   const credit = obj(r.credit);
   const stake = obj(r.stake);
+  const converted = obj(r.converted);
   return {
     agentId,
     token,
@@ -93,6 +100,7 @@ export function parseAgent(raw: unknown): OrbioAgent | null {
       : null,
     credit: credit ? { mintedAtoms: str(credit.mintedAtoms), owedAtoms: str(credit.owedAtoms), claimedAtoms: str(credit.claimedAtoms) } : null,
     stake: stake ? { stakedWei: str(stake.stakedWei), claimedFeesWei: str(stake.claimedFeesWei), protocolFeeWei: str(stake.protocolFeeWei) } : null,
+    converted: converted ? { usdgAtoms: str(converted.usdgAtoms) } : null,
   };
 }
 

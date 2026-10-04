@@ -15,7 +15,7 @@ This is **Moofield's policy** for the $CREDIT the MooBot agent receives. It is n
 | {{AGENT_OPS_PCT}}% | Running the agent (taken first) |
 | {{TREASURY_PCT}}% | The treasury |
 
-[[Live]] The [Credits](/credits) page shows these figures from the MooBot agent's Orbio record once the official $MOOBOT contract is confirmed there. "Received" means the $CREDIT Orbio reports as claimed to the agent's wallet.
+[[Live]] The [Credits](/credits) page shows these figures from the MooBot agent's Orbio record once the official $MOOBOT contract is confirmed there. "Received" adds up the two ways Orbio pays the agent: the gateway balance it credits from the agent's converted fee share (one $CREDIT is one dollar of balance), and staking $CREDIT claimed to the agent's wallet. $CREDIT that has accrued but isn't claimed yet is shown separately.
 
 How Orbio itself splits an agent's fees is set by Orbio and can change. Moofield doesn't restate it: see [Orbio's docs]({{ORBIO_DOCS}}) and its [live launch terms]({{ORBIO_TERMS}}).
 

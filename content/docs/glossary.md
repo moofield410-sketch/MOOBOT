@@ -14,7 +14,7 @@ Every wallet holding at least the voting minimum of $ORBIO (currently {{MIN_ORBI
 
 ## Field Fund
 
-The total $CREDIT the MooBot agent has received: what Orbio reports as claimed to the agent's wallet. Moofield's policy is that {{AGENT_OPS_PCT}}% runs the agent first and {{TREASURY_PCT}}% goes to the treasury. Shown once the official $MOOBOT contract is confirmed on Orbio.
+The total $CREDIT the MooBot agent has received, as Orbio reports it: the gateway balance Orbio credits from the agent's converted fee share (one $CREDIT is one dollar of balance), plus staking $CREDIT claimed to the agent's wallet. Moofield's policy is that {{AGENT_OPS_PCT}}% runs the agent first and {{TREASURY_PCT}}% goes to the treasury. Shown once the official $MOOBOT contract is confirmed on Orbio.
 
 ## Fighter
 

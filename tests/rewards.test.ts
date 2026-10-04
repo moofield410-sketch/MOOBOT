@@ -246,5 +246,7 @@ describe("formatCredits", () => {
     assert.equal(formatCredits(credits(1_234)), "1,234");
     assert.equal(formatCredits(credits(1) + 500_000n), "1.5");
     assert.equal(formatCredits(null), "n/a");
+    assert.equal(formatCredits(2_000n), "<0.01");
+    assert.equal(formatCredits(0n), "0");
   });
 });

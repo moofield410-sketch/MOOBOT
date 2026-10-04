@@ -40,6 +40,7 @@ function agent(n: number, priceMicro: number, o: Partial<OrbioAgent> & { graduat
     curve: o.curve ?? null,
     credit: null,
     stake: null,
+    converted: null,
   };
 }
 

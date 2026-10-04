@@ -7,6 +7,7 @@ import { readWalletBalances } from "@/lib/balances";
 import { clearCache } from "@/lib/cache";
 import { getCredits } from "@/lib/credits";
 import { auraTier, checkTokenAddress, getMooBot } from "@/lib/moobot";
+import { receivedFrom } from "@/lib/rewards";
 import { OrbioHttpError, type Fetcher } from "@/lib/sources/orbio-api";
 import type { ChainReader } from "@/lib/sources/types";
 import type { Address } from "@/lib/types";
@@ -110,6 +111,7 @@ describe("$MOOBOT launch switch", () => {
       creditOwedAtoms: ERRAND.credit.owedAtoms,
       creditClaimedAtoms: ERRAND.credit.claimedAtoms,
       creditMintedAtoms: ERRAND.credit.mintedAtoms ?? null,
+      gatewayCreditAtoms: ERRAND.converted.usdgAtoms,
     });
   });
 
@@ -230,9 +232,22 @@ describe("$MOOBOT features", () => {
     try {
       const c = await getCredits();
       assert.equal(c.source, "orbio");
-      assert.equal(c.data?.receivedAtoms, ERRAND.credit.claimedAtoms);
+      // Received = the gateway balance credited from the converted fee share + staking $CREDIT claimed.
+      assert.equal(c.data?.receivedAtoms, (BigInt(ERRAND.converted.usdgAtoms) + BigInt(ERRAND.credit.claimedAtoms)).toString());
+      assert.equal(c.data?.gatewayAtoms, ERRAND.converted.usdgAtoms);
+      assert.equal(c.data?.claimedAtoms, ERRAND.credit.claimedAtoms);
+      assert.equal(c.data?.waitingAtoms, ERRAND.credit.owedAtoms, "accrued but unclaimed stays apart");
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+});
+
+describe("Field Fund total", () => {
+  it("adds the gateway balance and claimed staking , and is n/a only when Orbio has neither", () => {
+    assert.equal(receivedFrom({ gatewayCreditAtoms: "103593327", creditClaimedAtoms: "0" }), 103_593_327n);
+    assert.equal(receivedFrom({ gatewayCreditAtoms: "1000000", creditClaimedAtoms: "2500000" }), 3_500_000n);
+    assert.equal(receivedFrom({ gatewayCreditAtoms: null, creditClaimedAtoms: "2500000" }), 2_500_000n);
+    assert.equal(receivedFrom({ gatewayCreditAtoms: null, creditClaimedAtoms: null }), null);
   });
 });

@@ -137,7 +137,7 @@ The Fix column gives the final wording or the action taken. Every INACCURATE row
 
 ## 5. Data source changes found during the audit
 
-- **Field Fund "$CREDIT received":** changed from the undocumented `credit.mintedAtoms` to the documented `credit.claimedAtoms`. The agent card also shows `credit.owedAtoms` ("accrued, not yet claimed"). On the errand record used in the tests, `mintedAtoms` is 6,057.65 $CREDIT while `claimedAtoms` is 0. Showing `mintedAtoms` as "received" would have been a guess.
+- **Field Fund "$CREDIT received":** changed from the undocumented `credit.mintedAtoms` to the documented `credit.claimedAtoms`. The agent card also shows `credit.owedAtoms` ("accrued, not yet claimed"). On the errand record used in the tests, `mintedAtoms` is 6,057.65 $CREDIT while `claimedAtoms` is 0. Showing `mintedAtoms` as "received" would have been a guess. **Update (2026-10-04, after launch):** "received" now also counts the gateway balance Orbio credits from the converted fee share (`converted.usdgAtoms`). Orbio documents that the harvest "sells the converted share for USDG and credits it as the agent's gateway balance" and that "one $CREDIT is one dollar of balance". On launch day the $MOOBOT agent had $103.59 there and 0 claimed, so the Field Fund showed 0. `mintedAtoms` stays unused.
 
 ## 6. Word search
 

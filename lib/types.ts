@@ -157,6 +157,9 @@ export interface CreditStats {
   receivedAtoms: string;
   /** Accrued to the agent but not yet claimed (Orbio credit.owedAtoms). null when Orbio has no value. */
   waitingAtoms: string | null;
+  /** The two parts of receivedAtoms (null when Orbio has no value): gateway balance credited, and staking $CREDIT claimed. */
+  gatewayAtoms: string | null;
+  claimedAtoms: string | null;
   agentOpsAtoms: string;
   treasuryAtoms: string;
 }
