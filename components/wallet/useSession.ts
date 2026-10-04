@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 
@@ -10,6 +11,7 @@ import { useAccount, useSignMessage } from "wagmi";
 export function useSession() {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const queryClient = useQueryClient();
   const [sessionAddress, setSessionAddress] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,18 +47,21 @@ export function useSession() {
       const body = (await res.json()) as { address?: string; error?: string };
       if (!res.ok) throw new Error(body.error ?? "Sign-in failed");
       setSessionAddress(body.address ?? null);
+      // Signing in can unlock moderator tools on the Tournament board.
+      void queryClient.invalidateQueries({ queryKey: ["tournament-me"] });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(/rejected|denied/i.test(msg) ? "Signature request was cancelled." : msg);
     } finally {
       setBusy(false);
     }
-  }, [address, signMessageAsync]);
+  }, [address, signMessageAsync, queryClient]);
 
   const signOut = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setSessionAddress(null);
-  }, []);
+    void queryClient.invalidateQueries({ queryKey: ["tournament-me"] });
+  }, [queryClient]);
 
   const signedIn = Boolean(address && sessionAddress && sessionAddress.toLowerCase() === address.toLowerCase());
   return { signedIn, busy, error, signIn, signOut };

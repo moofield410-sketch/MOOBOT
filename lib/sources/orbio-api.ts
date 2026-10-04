@@ -324,10 +324,16 @@ export async function fetchGraduatedMasters(fetcher: Fetcher = defaultFetcher): 
 }
 
 /** Launchpad agents owned or operated by a wallet (Orbio's `wallet` filter), with graduation confirmed. */
-export async function fetchAgentsByWallet(wallet: Address, fetcher: Fetcher = defaultFetcher): Promise<OwnedAgent[]> {
+/** Orbio agents a wallet owns or operates (Orbio's `wallet` filter matches the owner or the agent wallet). */
+export async function fetchOrbioAgentsByWallet(wallet: Address, fetcher: Fetcher = defaultFetcher): Promise<OrbioAgent[]> {
   const body = obj(await fetcher(`${ORBIO_API.baseUrl}/agents?wallet=${wallet}&limit=${ORBIO_API.pageSize}`));
   if (!Array.isArray(body?.data)) throw new Error("Orbio API: unexpected agent list shape");
-  const agents = body.data.map(parseAgent).filter((a): a is OrbioAgent => a !== null);
+  // The Tournament also checks owner/agentWallet itself before accepting a pitch (lib/tournament/service.ts).
+  return body.data.map(parseAgent).filter((a): a is OrbioAgent => a !== null);
+}
+
+export async function fetchAgentsByWallet(wallet: Address, fetcher: Fetcher = defaultFetcher): Promise<OwnedAgent[]> {
+  const agents = await fetchOrbioAgentsByWallet(wallet, fetcher);
   const { confirmed } = await confirmGraduated(agents, fetcher);
   const graduated = new Set(confirmed.map((a) => a.agentId));
   return agents.map((a) => ({

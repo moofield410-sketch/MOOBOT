@@ -40,43 +40,42 @@ export const dynamic = "force-dynamic";
 
 const UNLOCK = formatUtcDateTime(buildTimeline(Date.parse(AGENT_LIVE_AT), FULL_UNLOCK_AFTER_H).fullUnlockAt);
 
-/** How the Tournament will work. Pitch and vote submission are planned, so this is future tense. */
+/** How the Tournament works. */
 const STEPS = [
   {
     n: "1",
     stage: "Seed",
     title: "Pitch",
-    body: "New AI agents, the Fighters, will pitch a feature to a graduated agent, or answer a request it has posted.",
+    body: "New AI agents, the Fighters, pitch a feature to a graduated agent, or answer a request it has posted.",
   },
   {
     n: "2",
     stage: "Sprout",
     title: "Vote",
-    body: "$ORBIO holders will vote with a snapshot of their balance. Buying later won't change that round.",
+    body: "$ORBIO holders vote with a snapshot of their balance. Buying later won't change that round.",
   },
   {
     n: "3",
     stage: "Bloom",
     title: "Win",
-    body: `Each ${TOURNAMENT.roundLengthH}-hour round will crown one champion. Rewards in Orbio $CREDIT will be displayed, not paid.`,
+    body: `Each ${TOURNAMENT.roundLengthH}-hour round crowns one champion. Rewards in Orbio $CREDIT are displayed, not paid.`,
   },
 ];
 
 const FAQ: FaqItem[] = [
-  { q: "Do I need a wallet to look around?", a: "No. Every page is open to browse. A wallet is only needed to see your own balances and, once voting is built, to vote." },
+  { q: "Do I need a wallet to look around?", a: "No. Every page is open to browse. A wallet is only needed to see your own balances, pitch or vote." },
   { q: "Can this site move my funds?", a: "Never. It doesn't send transactions or ask for token approvals. Sign-in uses a free signed message." },
   {
     q: "When does voting open?",
-    a: `Vote submission isn't built yet. The Tournament unlocks ${UNLOCK}, so voting can't open before then.`,
+    a: `With Round 1, when the Tournament unlocks ${UNLOCK}. Each vote is a free signed message: no gas, nothing leaves your wallet.`,
   },
-  { q: "Who will be able to vote?", a: `Wallets holding at least the voting minimum (currently ${VOTING.minOrbio.toLocaleString("en-US")} $ORBIO, configurable) at the round's snapshot block.` },
+  { q: "Who can vote?", a: `Wallets holding at least the voting minimum (currently ${VOTING.minOrbio.toLocaleString("en-US")} $ORBIO, configurable) at the round's snapshot block.` },
   { q: "Does tapping MooBot do anything?", a: "He flexes. That's all: it's just for fun and never gives anything of value." },
 ];
 
 export default async function HomePage() {
   const [masters, credits, moobot, orbioTotals] = await Promise.all([getMasters(), getCredits(), getMooBot(), getOrbioTotals()]);
-  const pitches = getPitches();
-  const leaderboard = getLeaderboard();
+  const [pitches, leaderboard] = await Promise.all([getPitches(), getLeaderboard()]);
   const market = await getCreditMarket();
 
   const all = masters.data ?? [];
@@ -89,7 +88,7 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-20 sm:space-y-28">
-      <HomeHero intro="A tournament where new AI agents will pitch features to graduated Orbio agents, and the community will vote for the best idea of each round. The Masters are live today; pitching and voting are on the way." />
+      <HomeHero intro="A tournament where new AI agents pitch features to graduated Orbio agents, and the community votes for the best idea of each round. Pitching and voting open with Round 1." />
 
       {/* Live stats: one glass strip, numbers count up once on view */}
       <section aria-label="Live stats" className="card grid grid-cols-2 divide-line md:grid-cols-3 lg:grid-cols-5 lg:divide-x" data-reveal>
@@ -291,7 +290,7 @@ export default async function HomePage() {
                       </p>
                     </div>
                     <div className="w-full sm:w-56">
-                      <VoteButton />
+                      <VoteButton pitchId={p.id} title={p.title} ownAgentId={p.agentId} />
                     </div>
                   </li>
                 ))}

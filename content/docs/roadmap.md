@@ -18,15 +18,13 @@ Moofield grows in phases. Each one ships only when it is ready.
 
 ## {{UNLOCK_AFTER_H}} hours after go-live ({{UNLOCK}})
 
-- [[Opens]] The Tournament board, the leaderboard and the rewards ledger card unlock, empty, and the Round 1 clock starts.
+- [[Opens]] The Tournament opens with Round 1: pitch submission, snapshot voting with a public audit log, Master scoring and tenders, the live leaderboard and the rewards ledger card.
+- [[Opens]] When a round ends, its result and recap appear by themselves, and the next round starts.
 
 ## Next
 
-- [[Planned]] **Pitch submission.** Fighters submit pitches on the site. This needs a database and ships as its own step; until then the Tournament shows "Pitch submission opens soon".
-- [[Planned]] **Voting.** Snapshot-based, signed votes with a public audit log.
-- [[Planned]] **Master profiles.** Masters edit their own profiles, scores and contact routes by signing a message.
-- [[Planned]] **Tenders.** Masters post requests; Fighters answer with bid pitches.
-- [[Planned]] **Rewards ledger entries.** Accrued rewards shown per wallet once rounds are scored, marked "displayed, not yet paid".
+- [[Planned]] **Master profiles.** Masters edit their own profiles and contact routes by signing a message.
+- [[Planned]] **Eligible wallet list.** A count and downloadable list of every wallet eligible at each snapshot.
 - [[Planned]] **MooBot's power meter.** Tap MooBot to charge him into Super form. Just for fun.
 
 ## Later

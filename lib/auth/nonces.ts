@@ -1,42 +1,41 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { AUTH } from "@/config";
+import { sessionSecret } from "@/lib/auth/session";
+import { kvSetIf } from "@/lib/kv";
 import type { Address } from "@/lib/types";
 
 /**
- * Single-use sign-in nonces, bound to an address. In memory, so this works on one server
- * instance only; move to Redis/KV before running several instances.
+ * Single-use sign-in nonces, bound to an address and a time. Each nonce carries its own proof
+ * (an HMAC with SESSION_SECRET), so any server instance can check it: on Netlify the nonce
+ * request and the verify request often land on different instances. Single use is marked in KV.
  */
 
-interface Entry {
-  address: string;
-  issuedAt: number;
-}
+const mac = (secret: string, address: string, issuedAt: number, rand: string) =>
+  createHmac("sha256", secret).update(`${address.toLowerCase()}|${issuedAt}|${rand}`).digest("base64url");
 
-const MAX_ENTRIES = 10_000;
-const g = globalThis as unknown as { __moobotNonces?: Map<string, Entry> };
-const store = (g.__moobotNonces ??= new Map());
-
-function prune(now: number) {
-  for (const [k, v] of store) if (now - v.issuedAt > AUTH.nonceTtlMs) store.delete(k);
-  while (store.size >= MAX_ENTRIES) store.delete(store.keys().next().value as string);
-}
-
-export function issueNonce(address: Address, now = Date.now()): { nonce: string; issuedAt: string } {
-  prune(now);
-  const nonce = randomBytes(16).toString("hex");
-  store.set(nonce, { address: address.toLowerCase(), issuedAt: now });
-  return { nonce, issuedAt: new Date(now).toISOString() };
+/** null when sign-in isn't configured (no SESSION_SECRET in production). */
+export function issueNonce(address: Address, now = Date.now()): { nonce: string; issuedAt: string } | null {
+  const secret = sessionSecret();
+  if (!secret) return null;
+  const rand = randomBytes(16).toString("hex");
+  return { nonce: `${rand}.${mac(secret, address, now, rand)}`, issuedAt: new Date(now).toISOString() };
 }
 
 export type NonceResult = { ok: true } | { ok: false; reason: string };
 
 /** Consumes a nonce. It can only ever be used once, by the address it was issued to, within the TTL. */
-export function consumeNonce(nonce: string, address: Address, issuedAt: string, now = Date.now()): NonceResult {
-  const e = store.get(nonce);
-  if (!e) return { ok: false, reason: "Unknown or already used sign-in request" };
-  store.delete(nonce);
-  if (now - e.issuedAt > AUTH.nonceTtlMs) return { ok: false, reason: "Sign-in request expired" };
-  if (e.address !== address.toLowerCase()) return { ok: false, reason: "Sign-in request was issued to a different address" };
-  if (Date.parse(issuedAt) !== e.issuedAt) return { ok: false, reason: "Sign-in request time does not match" };
-  return { ok: true };
+export async function consumeNonce(nonce: string, address: Address, issuedAt: string, now = Date.now()): Promise<NonceResult> {
+  const secret = sessionSecret();
+  if (!secret) return { ok: false, reason: "Sign-in is not configured yet" };
+  const [rand, given] = nonce.split(".");
+  const at = Date.parse(issuedAt);
+  if (!rand || !given || !/^[0-9a-f]{32}$/.test(rand) || !Number.isFinite(at)) return { ok: false, reason: "Unknown sign-in request" };
+  const expected = Buffer.from(mac(secret, address, at, rand));
+  const got = Buffer.from(given);
+  if (expected.length !== got.length || !timingSafeEqual(expected, got)) {
+    return { ok: false, reason: "Sign-in request was issued to a different address or time" };
+  }
+  if (now - at > AUTH.nonceTtlMs || at - now > 60_000) return { ok: false, reason: "Sign-in request expired" };
+  const fresh = await kvSetIf(`auth:nonce:${rand}`, { usedAt: now }, null);
+  return fresh ? { ok: true } : { ok: false, reason: "This sign-in request was already used" };
 }

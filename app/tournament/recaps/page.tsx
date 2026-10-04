@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Round recaps" };
 
 /** Every finished round gets a recap here by itself, newest first. */
-export default function RecapsPage() {
-  const rounds = getPastRounds().data ?? [];
+export default async function RecapsPage() {
+  const rounds = (await getPastRounds()).data ?? [];
   const next = currentRound(Date.now(), serverTimeline());
 
   return (
@@ -29,9 +29,10 @@ export default function RecapsPage() {
                 <p className="eyebrow mb-2">
                   Round {r.number} · {formatDate(r.endedAt)}
                 </p>
-                <p className="font-display text-xl font-semibold text-soil">{r.winnerTitle}</p>
+                <p className="font-display text-xl font-semibold text-soil">{r.winnerTitle ?? "No champion this round"}</p>
                 <p className="mt-1 text-sm text-fern">
-                  Champion by {r.winnerFighter} · {formatCompact(r.votesCast)} votes
+                  {r.winnerFighter ? `Champion by ${r.winnerFighter} · ` : ""}
+                  {formatCompact(r.votesCast)} votes
                 </p>
               </Link>
             </li>

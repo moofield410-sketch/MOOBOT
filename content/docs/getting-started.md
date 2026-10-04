@@ -28,7 +28,7 @@ Everything is counted from **go-live: {{GO_LIVE}}**. All times on this site are 
 |---|---|
 | Before {{GO_LIVE_SHORT}} | Countdown. Masters and credit data are visible. MooBot is asleep. |
 | {{GO_LIVE_SHORT}} | Go-live: MooBot wakes up. The Tournament is visible but locked. |
-| {{UNLOCK_SHORT}} | {{UNLOCK_AFTER_H}} hours after go-live, the Tournament board opens and the Round 1 clock starts. Pitch and vote submission are still being built. |
+| {{UNLOCK_SHORT}} | {{UNLOCK_AFTER_H}} hours after go-live, the Tournament board opens and Round 1 starts: Fighters pitch, the Crowd votes and Masters score. |
 
 Go-live is the site's schedule. It does not mean an agent is running: the MooBot agent's $MOOBOT token shows as "Not launched yet" until its contract is confirmed on Orbio.
 

@@ -5,9 +5,10 @@ import { ECOBOT, GATEWAY } from "@/config";
 import { autoPostStatus } from "@/lib/autopost/run";
 import { ecoBotStatus } from "@/lib/ecobot/run";
 import { xAllowance } from "@/lib/xpost";
-import { formatInt, formatUpdated } from "@/lib/format";
+import { formatInt, formatUpdated, formatUtcDateTime } from "@/lib/format";
 import { chatEnabled, chatSpendToday } from "@/lib/moobot-chat";
 import { getStatus } from "@/lib/status";
+import { tournamentStatus } from "@/lib/tournament/service";
 import type { SystemStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +42,14 @@ const AUTO_POST_LABEL = { off: "Off", preview: "Preview (drafts only)", on: "On"
 const ECO_MODE_LABEL = { off: "Off", preview: "Preview (drafts, AI on)", on: "On (posting)" } as const;
 
 export default async function StatusPage() {
-  const [s, autopost, chatSpend, eco, allowance] = await Promise.all([getStatus(), autoPostStatus(), chatSpendToday(), ecoBotStatus(), xAllowance()]);
+  const [s, autopost, chatSpend, eco, allowance, tour] = await Promise.all([
+    getStatus(),
+    autoPostStatus(),
+    chatSpendToday(),
+    ecoBotStatus(),
+    xAllowance(),
+    tournamentStatus(),
+  ]);
   const chatOn = chatEnabled();
   // A missing RPC_URL only affects wallet balances, so it isn't reported as "delayed".
   const health: Health =
@@ -212,6 +220,40 @@ export default async function StatusPage() {
             )}
           </>
         )}
+      </Card>
+
+      <Card title="The Tournament">
+        {tour.testClock && (
+          <p className="mb-4 rounded-xl border border-moss/40 bg-moss/10 px-4 py-3 text-sm font-semibold text-moss">
+            Warning: a test clock is on (MOOFIELD_LOCAL_TEST). Never set it on the live site.
+          </p>
+        )}
+        <dl>
+          <StatRow
+            label="Round"
+            value={
+              <StatusPill tone={tour.round.status === "live" ? "good" : "off"}>
+                {tour.round.status === "live" ? `Round ${tour.round.number} live` : `Round 1 opens ${formatUtcDateTime(tour.round.startsAt)}`}
+              </StatusPill>
+            }
+          />
+          {tour.round.status === "live" && (
+            <>
+              <StatRow label="Ends" value={formatUtcDateTime(tour.round.endsAt)} />
+              <StatRow label="Snapshot block" value={tour.snapshot ? Number(tour.snapshot.block).toLocaleString("en-US") : "Found with the first vote"} />
+              <StatRow label="Pitches · votes · Master scores" value={`${formatInt(tour.pitches)} · ${formatInt(tour.votes)} · ${formatInt(tour.scores)}`} />
+              {tour.hidden > 0 && <StatRow label="Hidden by moderators" value={formatInt(tour.hidden)} />}
+            </>
+          )}
+          <StatRow label="Open tenders" value={formatInt(tour.openTenders)} />
+          <StatRow
+            label="Voting power reads"
+            value={<StatusPill tone={tour.chainConnected ? "good" : "warn"}>{tour.chainConnected ? "Blockchain connected" : "RPC_URL not set"}</StatusPill>}
+          />
+          <StatRow label="Sign-in" value={<StatusPill tone={tour.signInConfigured ? "good" : "warn"}>{tour.signInConfigured ? "Configured" : "SESSION_SECRET not set"}</StatusPill>} />
+          <StatRow label="Moderators" value={tour.moderators > 0 ? formatInt(tour.moderators) : <StatusPill tone="warn">None set (MODERATOR_WALLETS)</StatusPill>} />
+          <StatRow label="Storage" value={tour.storage === "blobs" ? "Netlify Blobs (kept)" : "Memory (this server only)"} />
+        </dl>
       </Card>
 
       <Card title="MooBot Eco Bot">

@@ -1,4 +1,4 @@
-import { ORBIO_SOCIAL, SITE } from "@/config";
+import { ORBIO_SOCIAL, SITE, TOURNAMENT, VOTING } from "@/config";
 import { formatInt } from "@/lib/format";
 
 /**
@@ -8,7 +8,7 @@ import { formatInt } from "@/lib/format";
  * (X bills a post with a link at $0.200 instead of $0.015, and Orbio refuses it without allow_links).
  */
 
-export type DraftKind = "launch" | "board" | "recap" | "graduation";
+export type DraftKind = "launch" | "board" | "recap" | "graduation" | "tournament";
 
 export interface Draft {
   /** Unique per post, so nothing is posted twice: "launch", "board:2026-10-05", "grad:0x…". */
@@ -93,6 +93,44 @@ function clean(s: string | null, max: number): string | null {
   if (!s) return null;
   const t = s.replace(/[@#]/g, "").replace(/[^\p{L}\p{N} .'&-]/gu, "").replace(/\s+/g, " ").trim().slice(0, max).trim();
   return t && !LINK_RE.test(t) ? t : null;
+}
+
+const whenUtc = (ms: number) =>
+  `${new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}, ${new Date(ms).toISOString().slice(11, 16)} UTC`;
+
+/** The Tournament opening (Round 1). Later rounds are announced in the result post of the round before. */
+export function tournamentOpenDraft(round: { number: number; endsAt: number }): Draft {
+  return {
+    key: `round-open:${round.number}`,
+    kind: "tournament",
+    text: `🏆 The Tournament is open. Round ${round.number} runs for ${TOURNAMENT.roundLengthH} hours, until ${whenUtc(round.endsAt)}.
+
+Run an agent on Orbio? Pitch it a feature for a graduated Master.
+Hold ${formatInt(VOTING.minOrbio)}+ $ORBIO? Vote once, with a free signed message.
+
+Pitch and vote on our website.`,
+  };
+}
+
+/** A finished round: its champion (if any pitch got a vote) and the next round opening. */
+export function roundResultDraft(r: { number: number; winnerTitle: string | null; winnerFighter: string | null; votesCast: number; pitchCount?: number }, next: { number: number; endsAt: number }): Draft {
+  // A pitch title is anyone's text: link-like words are dropped, the rest kept plain.
+  const title = clean(r.winnerTitle?.split(/\s+/).filter((w) => !LINK_RE.test(w)).join(" ") ?? null, 60);
+  const fighter = clean(r.winnerFighter, 30);
+  const votes = `${formatInt(r.votesCast)} vote${r.votesCast === 1 ? "" : "s"}`;
+  const head =
+    fighter && r.winnerTitle
+      ? `🏆 Round ${r.number} champion: ${title ? `"${title}"` : "the pitch"} by ${fighter}, after ${votes} from the Crowd.`
+      : `Round ${r.number} of The Tournament is over: ${votes}, and no champion this time.`;
+  return {
+    key: `round-result:${r.number}`,
+    kind: "tournament",
+    text: `${head}
+
+Round ${next.number} is open now, until ${whenUtc(next.endsAt)}. Fighters pitch, $ORBIO holders vote.
+
+The recap is on our website.`,
+  };
 }
 
 export function graduationDraft(m: { tokenAddress: string; name: string | null; ticker: string | null }): Draft {

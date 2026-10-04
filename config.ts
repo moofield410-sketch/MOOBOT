@@ -302,6 +302,18 @@ export const REWARDS = {
 
 export const TOURNAMENT = {
   roundLengthH: 72,
+  /** A signed pitch, vote, score or tender must reach the server within this long of being signed. */
+  signatureMaxAgeMs: 10 * 60_000,
+  pitch: { titleMin: 6, titleMax: 80, summaryMin: 20, summaryMax: 500, demoMax: 200 },
+  tender: { titleMin: 6, titleMax: 80, descriptionMin: 20, descriptionMax: 600, criteriaMax: 5, criterionMax: 40, minDays: 1, maxDays: 14, openPerMaster: 3 },
+  /** Masters score pitches from 1 to scoreMax. */
+  scoreMax: 10,
+  /** Top places (by voting power) when a round ends: 1 is the winner, the rest are shortlisted. */
+  shortlist: 3,
+  /** MODERATOR_WALLETS (server-only): comma-separated wallets that may hide pitches, when signed in. */
+  moderatorsEnv: "MODERATOR_WALLETS",
+  /** How long the board is reused before re-reading the store. */
+  boardTtlMs: 5_000,
 } as const;
 
 export const VOTING = {

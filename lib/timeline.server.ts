@@ -3,13 +3,19 @@ import { buildTimeline, HOUR_MS, type Timeline } from "@/lib/schedule";
 
 /**
  * Server-side timeline. In development you can dry-run the schedule on a short
- * clock with DEV_AGENT_LIVE_AT and DEV_HOUR_MS (see .env.example). Both are ignored in production.
+ * clock with DEV_AGENT_LIVE_AT and DEV_HOUR_MS (see .env.example). Both are ignored in production,
+ * unless MOOFIELD_LOCAL_TEST=1 (local end-to-end checks with `next start` only; never set it on Netlify).
  */
+
+/** True when the schedule is being dry-run on a test clock (the Status page warns about it). */
+export function testClockActive(): boolean {
+  return process.env.MOOFIELD_LOCAL_TEST === "1" && Boolean(process.env.DEV_AGENT_LIVE_AT || process.env.DEV_HOUR_MS);
+}
 
 const g = globalThis as unknown as { __moobotDevStart?: number };
 
 export function serverTimeline(): Timeline {
-  const isProd = process.env.NODE_ENV === "production";
+  const isProd = process.env.NODE_ENV === "production" && process.env.MOOFIELD_LOCAL_TEST !== "1";
   let agentLiveAt = Date.parse(AGENT_LIVE_AT);
   let hourMs = HOUR_MS;
 

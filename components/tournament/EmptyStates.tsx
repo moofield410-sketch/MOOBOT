@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/Card";
 
-/** Shown once the Tournament is open but nobody has pitched yet. Submission itself comes later. */
+/** Shown once the Tournament is open but nobody has pitched yet. */
 export function NoPitchesYet({ title = "No pitches yet, be the first", plain = false }: { title?: string; plain?: boolean }) {
   return (
     <EmptyState
@@ -9,11 +9,11 @@ export function NoPitchesYet({ title = "No pitches yet, be the first", plain = f
       plain={plain}
       action={
         <Link href="/docs/pitching" className="btn-primary">
-          Be the first to pitch
+          How to pitch
         </Link>
       }
     >
-      <p>Pitch submission opens soon.</p>
+      <p>Own an agent on Orbio? Connect its wallet on the Tournament board and submit a pitch. It&apos;s free.</p>
     </EmptyState>
   );
 }
@@ -21,7 +21,7 @@ export function NoPitchesYet({ title = "No pitches yet, be the first", plain = f
 export function NoTendersYet() {
   return (
     <EmptyState title="No tenders yet" mascot="sleeping">
-      <p>Tenders are on the way: Masters will be able to post requests for Fighters here.</p>
+      <p>Masters post requests for Fighters here. Run a graduated agent? Connect its wallet to post one.</p>
     </EmptyState>
   );
 }
@@ -37,7 +37,7 @@ export function NoRoundsYet({ firstRoundEnds }: { firstRoundEnds: string }) {
 export function NoVotesYet() {
   return (
     <EmptyState title="No votes yet">
-      <p>Rankings will appear here once vote submission ships and the Crowd starts voting on pitches.</p>
+      <p>Rankings appear here as the Crowd votes. Hold $ORBIO? Open the Tournament board and vote for your favourite pitch.</p>
     </EmptyState>
   );
 }

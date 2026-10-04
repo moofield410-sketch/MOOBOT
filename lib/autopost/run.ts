@@ -1,5 +1,5 @@
 import { GATEWAY } from "@/config";
-import { boardDraft, graduationDraft, launchDraft, recapDraft, type Draft } from "@/lib/autopost/drafts";
+import { boardDraft, graduationDraft, launchDraft, recapDraft, roundResultDraft, tournamentOpenDraft, type Draft } from "@/lib/autopost/drafts";
 import { getCredits } from "@/lib/credits";
 import { utcDay } from "@/lib/field-fund-history";
 import { formatMicroUsd } from "@/lib/format";
@@ -13,7 +13,9 @@ import { getOrbioTotals } from "@/lib/orbio-totals";
 import { getMasters } from "@/lib/registry";
 import { formatCredits } from "@/lib/rewards";
 import type { OrbioTotals } from "@/lib/sources/orbio-api";
-import type { CreditStats, DataEnvelope, Master } from "@/lib/types";
+import type { RoundState } from "@/lib/rounds";
+import { getTournamentState } from "@/lib/tournament";
+import type { CreditStats, DataEnvelope, Master, PastRound } from "@/lib/types";
 
 /**
  * The fixed posts to @M00FIELD (launch, Bloom Pop board, and the recap and graduation posts while
@@ -69,6 +71,8 @@ export interface AutoPostSources {
   credits(): Promise<DataEnvelope<CreditStats>>;
   masters(): Promise<DataEnvelope<Master[]>>;
   chart(): Promise<MooBotChartState>;
+  /** The running round and finished rounds; null when unavailable. Optional, so older callers need not pass it. */
+  tournament?(): Promise<{ round: RoundState; past: PastRound[] } | null>;
 }
 
 const realSources: AutoPostSources = {
@@ -77,7 +81,14 @@ const realSources: AutoPostSources = {
   credits: () => getCredits(),
   masters: () => getMasters(),
   chart: () => getMooBotChart("1d"),
+  async tournament() {
+    const s = await getTournamentState();
+    return s.data ? { round: s.data.round, past: s.data.past } : null;
+  },
 };
+
+/** Round posts go out only this long after the moment they are about, so turning auto-posts on later doesn't post old news. */
+const ROUND_POST_WINDOW_MS = 24 * 3_600_000;
 
 /** The site's public address, for image URLs. Netlify sets URL. */
 const siteUrl = () => process.env.URL ?? null;
@@ -126,6 +137,13 @@ export async function dueDrafts(now: number, src: AutoPostSources = realSources)
 
   const moobot = await src.moobot();
   if (moobot.status === "verified") drafts.push(launchDraft(moobot.address, siteUrl()));
+  // The Tournament: Round 1 opening, then each round's result (which also announces the next round).
+  const t = await src.tournament?.().catch(() => null);
+  if (t?.round.status === "live") {
+    const last = t.past.find((r) => r.number === t.round.number - 1);
+    if (t.round.number === 1 && now - t.round.startsAt < ROUND_POST_WINDOW_MS) drafts.push(tournamentOpenDraft(t.round));
+    if (last && now - Date.parse(last.endedAt) < ROUND_POST_WINDOW_MS) drafts.push(roundResultDraft(last, t.round));
+  }
   if (minutes >= A.boardAfterMinutes) drafts.push(boardDraft(day, siteUrl()));
   if (!ecoBot && minutes >= A.recapHourUtc * 60) {
     const recap = recapDraft(day, await recapFacts(src, now));

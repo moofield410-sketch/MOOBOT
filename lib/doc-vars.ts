@@ -139,6 +139,14 @@ export function docVars(): Record<string, string> {
     REPEAT_SHARE: fraction(REWARDS.repeatWinner.factor),
     MASTER_MIN_SCORED: String(REWARDS.mastersParticipation.minScoredPitches),
     MASTERS_REFRESH_MIN: String(Math.round(CACHE.mastersTtlMs / 60_000)),
+    SCORE_RANGE: `1 to ${TOURNAMENT.scoreMax}`,
+    SIGNATURE_MIN: String(Math.round(TOURNAMENT.signatureMaxAgeMs / 60_000)),
+    PITCH_TITLE_MAX: String(TOURNAMENT.pitch.titleMax),
+    PITCH_SUMMARY_MAX: String(TOURNAMENT.pitch.summaryMax),
+    TENDER_DAYS: `${TOURNAMENT.tender.minDays} to ${TOURNAMENT.tender.maxDays} days`,
+    TENDER_CRITERIA_MAX: String(TOURNAMENT.tender.criteriaMax),
+    TENDERS_PER_MASTER: String(TOURNAMENT.tender.openPerMaster),
+    SHORTLIST: String(TOURNAMENT.shortlist),
     CHAT_LIMIT:
       GATEWAY.chat.perVisitorPerDay === null
         ? "There's no daily question limit."

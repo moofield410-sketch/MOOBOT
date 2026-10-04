@@ -29,7 +29,7 @@ function Rank({ n }: { n: number }) {
 export default async function LeaderboardPage() {
   const masters = await getMasters();
   const name = new Map((masters.data ?? []).map((m) => [m.tokenAddress, m.name]));
-  const board = getLeaderboard();
+  const board = await getLeaderboard();
 
   return (
     <div className="space-y-10">
@@ -38,8 +38,8 @@ export default async function LeaderboardPage() {
         title="Who's leading this round"
         intro={
           <>
-            Pitches will be ranked by the voting power behind them; ties go to the earliest submission. Each wallet will get
-            one vote per round. Vote submission is still being built.{" "}
+            Pitches are ranked by the voting power behind them; ties go to the earliest submission. Each wallet gets one vote
+            per round, and the first vote is final.{" "}
             <Link href="/docs/voting" className="link">
               How voting works
             </Link>
@@ -50,7 +50,7 @@ export default async function LeaderboardPage() {
       <LockGate
         feature="votingOpen"
         title="The leaderboard opens in"
-        description={`The leaderboard unlocks ${FULL_UNLOCK_AFTER_H} hours after go-live, and fills once voting is built.${USE_MOCK_DATA ? " Here's a preview of how it will look." : ""}`}
+        description={`The leaderboard unlocks ${FULL_UNLOCK_AFTER_H} hours after go-live, and fills as the Crowd votes.${USE_MOCK_DATA ? " Here's a preview of how it will look." : ""}`}
         minHeight="30rem"
       >
         {board.data && board.data.pitches.length > 0 ? (

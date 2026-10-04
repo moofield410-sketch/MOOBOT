@@ -5,31 +5,39 @@ import { MooBotMascot } from "@/components/MooBotMascot";
 import { StatTile } from "@/components/ui/Stats";
 import { SprigDivider } from "@/components/ui/Nature";
 import { XIcon } from "@/components/ui/Icons";
+import { NotAvailable } from "@/components/ui/NotAvailable";
 import { SOCIAL } from "@/config";
 import { formatCompact, formatDate } from "@/lib/format";
+import { NA_REASONS } from "@/lib/na-reasons";
 import { getPastRounds } from "@/lib/tournament";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ round: string }> };
 
-function findRound(round: string) {
+async function findRound(round: string) {
   if (!/^\d{1,5}$/.test(round)) return null;
-  return getPastRounds().data?.find((r) => r.number === Number(round)) ?? null;
+  return (await getPastRounds()).data?.find((r) => r.number === Number(round)) ?? null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const r = findRound((await params).round);
-  return r ? { title: `Round ${r.number} recap`, description: `Champion: ${r.winnerTitle} by ${r.winnerFighter}.` } : { title: "Recap not found" };
+  const r = await findRound((await params).round);
+  if (!r) return { title: "Recap not found" };
+  return {
+    title: `Round ${r.number} recap`,
+    description: r.winnerTitle ? `Champion: ${r.winnerTitle} by ${r.winnerFighter}.` : `Round ${r.number} of the Moofield Tournament: no champion.`,
+  };
 }
 
 /** A finished round's recap, built from the round's results with a ready-made post for X. */
 export default async function RecapPage({ params }: Props) {
-  const r = findRound((await params).round);
+  const r = await findRound((await params).round);
   if (!r) notFound();
 
   const site = URL.canParse(process.env.URL ?? "") ? process.env.URL : null;
-  const text = `Round ${r.number} of the Moofield Tournament is in 🏆 Champion: "${r.winnerTitle}" by ${r.winnerFighter}, with ${formatCompact(r.votesCast)} votes.`;
+  const text = r.winnerTitle
+    ? `Round ${r.number} of the Moofield Tournament is in 🏆 Champion: "${r.winnerTitle}" by ${r.winnerFighter}, with ${formatCompact(r.votesCast)} votes.`
+    : `Round ${r.number} of the Moofield Tournament is over: ${formatCompact(r.votesCast)} votes were cast.`;
   const share = new URLSearchParams({ text, via: SOCIAL.xHandle.replace(/^@/, "") });
   if (site) share.set("url", `${site}/tournament/recaps/${r.number}`);
 
@@ -43,18 +51,40 @@ export default async function RecapPage({ params }: Props) {
         <p className="eyebrow mx-auto mb-3 w-max">
           Round {r.number} · {formatDate(r.startedAt)} to {formatDate(r.endedAt)}
         </p>
-        <h1 className="font-display text-3xl font-semibold text-soil sm:text-4xl">{r.winnerTitle}</h1>
-        <p className="mt-2 text-fern">Champion pitch by {r.winnerFighter}</p>
-        <MooBotMascot state="happy" size={140} decorative className="mx-auto mt-6" />
+        <h1 className="font-display text-3xl font-semibold text-soil sm:text-4xl">{r.winnerTitle ?? "No champion this round"}</h1>
+        <p className="mt-2 text-fern">{r.winnerFighter ? `Champion pitch by ${r.winnerFighter}` : "No pitch received a vote."}</p>
+        <MooBotMascot state={r.winnerTitle ? "happy" : "idle"} size={140} decorative className="mx-auto mt-6" />
         <div className="mt-8 grid gap-4 text-left sm:grid-cols-3">
           <StatTile label="Votes cast" value={formatCompact(r.votesCast)} />
-          <StatTile label="Eligible wallets" value={formatCompact(r.eligibleWallets)} />
-          <StatTile label="Round pool" value={formatCompact(r.poolCredits)} hint="$CREDIT, displayed, not paid" />
+          <StatTile label="Pitches" value={formatCompact(r.pitchCount ?? 0)} />
+          <StatTile
+            label="Round pool"
+            value={r.poolCredits === null ? <NotAvailable reason={NA_REASONS.capNotSet} /> : formatCompact(r.poolCredits)}
+            hint="$CREDIT, displayed, not paid"
+          />
         </div>
+        {r.top && r.top.length > 1 && (
+          <ol className="mx-auto mt-8 max-w-md space-y-2 text-left">
+            {r.top.map((x, i) => (
+              <li key={x.id} className="flex items-center gap-3 rounded-xl border border-line bg-wash px-4 py-2.5 text-sm">
+                <span className="font-mono font-semibold text-grass">#{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate text-soil">
+                  {x.title} <span className="text-fern">· {x.fighter}</span>
+                </span>
+                <span className="font-mono tabular-nums text-soil" title="Voting power">
+                  {formatCompact(x.votingPower)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
         <a href={`https://x.com/intent/post?${share}`} target="_blank" rel="noopener noreferrer" className="btn-primary mt-8">
           <XIcon /> Share this recap
         </a>
-        <p className="mt-4 font-mono text-xs text-fern">Snapshot block {Number(r.snapshotBlock).toLocaleString("en-US")}</p>
+        {r.snapshotBlock && <p className="mt-4 font-mono text-xs text-fern">Snapshot block {Number(r.snapshotBlock).toLocaleString("en-US")}</p>}
+        <a href={`/api/tournament/audit?round=${r.number}`} target="_blank" rel="noopener noreferrer" className="tap link mt-2 inline-block text-xs">
+          Audit log (every signed vote)
+        </a>
       </article>
     </div>
   );

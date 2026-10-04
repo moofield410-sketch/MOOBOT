@@ -3,13 +3,13 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { GET as cronAutopost } from "@/app/api/cron/autopost/route";
 import { ECOBOT, GATEWAY } from "@/config";
-import { boardDraft, graduationDraft, launchDraft, LINK_RE, MAX_POST_CHARS, recapDraft, type Draft } from "@/lib/autopost/drafts";
+import { boardDraft, graduationDraft, launchDraft, LINK_RE, MAX_POST_CHARS, recapDraft, roundResultDraft, tournamentOpenDraft, type Draft } from "@/lib/autopost/drafts";
 import { autoPostStatus, dueDrafts, runAutoPost, type AutoPostSources } from "@/lib/autopost/run";
 import { dailyBoard, kindsFor, parseDay, rowsFor } from "@/lib/bloom-pop";
 import { kvClearMemory, kvSet } from "@/lib/kv";
 import type { MooBotState } from "@/lib/moobot";
 import type { GatewayFetch } from "@/lib/orbio-gateway";
-import type { Master } from "@/lib/types";
+import type { Master, PastRound } from "@/lib/types";
 import { xAllowance } from "@/lib/xpost";
 
 /** Auto-posts to @M00FIELD. A fake Orbio gateway stands in for social.post; nothing is posted. */
@@ -80,6 +80,24 @@ describe("Auto-post drafts", () => {
     checkDraft(boardDraft("2026-10-05", SITE_URL));
     checkDraft(recapDraft("2026-10-05", { agents: 123_456, launchedYesterday: 9_999, fieldFund: "1,234,567.89", moobotPrice: "$0.000833", moobotChangePct: -12.345 })!);
     checkDraft(graduationDraft({ tokenAddress: master(1).tokenAddress, name: "A".repeat(200), ticker: "B".repeat(50) }));
+    checkDraft(tournamentOpenDraft({ number: 1, endsAt: Date.parse("2026-10-08T12:00:00Z") }));
+    checkDraft(roundResultDraft({ number: 12, winnerTitle: "W".repeat(200), winnerFighter: "F".repeat(200), votesCast: 123_456 }, { number: 13, endsAt: Date.parse("2026-11-08T12:00:00Z") }));
+    checkDraft(roundResultDraft({ number: 1, winnerTitle: null, winnerFighter: null, votesCast: 0 }, { number: 2, endsAt: Date.parse("2026-10-11T12:00:00Z") }));
+  });
+
+  it("round posts name the champion in plain words, never a link, mention or extra cashtag", () => {
+    const next = { number: 2, endsAt: Date.parse("2026-10-11T12:00:00Z") };
+    const d = roundResultDraft({ number: 1, winnerTitle: "Grab $SCAM at scam.xyz @all #now", winnerFighter: "Holder Bot", votesCast: 42 }, next);
+    checkDraft(d);
+    assert.equal(d.key, "round-result:1");
+    assert.match(d.text, /^🏆 Round 1 champion: "Grab SCAM at all now" by Holder Bot, after 42 votes from the Crowd./);
+    assert.match(roundResultDraft({ number: 1, winnerTitle: "Daily holder digest", winnerFighter: "Errand", votesCast: 2 }, next).text, /"Daily holder digest" by Errand/);
+    assert.match(d.text, /Round 2 is open now, until 11 Oct, 12:00 UTC/);
+    const none = roundResultDraft({ number: 1, winnerTitle: null, winnerFighter: null, votesCast: 1 }, next);
+    assert.match(none.text, /^Round 1 of The Tournament is over: 1 vote, and no champion this time./);
+    const open = tournamentOpenDraft({ number: 1, endsAt: Date.parse("2026-10-08T12:00:00Z") });
+    assert.equal(open.key, "round-open:1");
+    assert.match(open.text, /until 8 Oct, 12:00 UTC/);
   });
 
   it("the launch post carries exactly the address it is given, and the poster", () => {
@@ -312,6 +330,30 @@ describe("Auto-post runs", () => {
     const r = await runAutoPost({ now: AFTERNOON, fetch: gateway(), sources: sources() });
     assert.match(r.error ?? "", /ORBIO_API_KEY/);
     assert.equal(posts.length, 0);
+  });
+
+  it("announces the Tournament opening and each round's result once, only while it's news", async () => {
+    const UNLOCK = Date.parse("2026-10-05T12:00:00Z");
+    const LEN = 72 * 3_600_000;
+    const round = (n: number, now: number) => ({ status: "live" as const, number: n, startsAt: UNLOCK + (n - 1) * LEN, endsAt: UNLOCK + n * LEN, countdownTo: UNLOCK + n * LEN, msRemaining: UNLOCK + n * LEN - now });
+    const r1 = { id: "r1", number: 1, startedAt: new Date(UNLOCK).toISOString(), endedAt: new Date(UNLOCK + LEN).toISOString(), snapshotBlock: "1", eligibleWallets: null, votesCast: 9, winnerPitchId: "r1-5", winnerTitle: "Daily digest", winnerFighter: "Bot", poolCredits: null };
+    const at = (now: number, n: number, past: PastRound[] = []) => dueDrafts(now, { ...sources(), tournament: async () => ({ round: round(n, now), past }) });
+    const keys = async (now: number, n: number, past?: PastRound[]) => (await at(now, n, past)).drafts.map((d) => d.key).filter((k) => k.startsWith("round"));
+    assert.deepEqual(await keys(UNLOCK + 60_000, 1), ["round-open:1"]);
+    assert.deepEqual(await keys(UNLOCK + 25 * 3_600_000, 1), [], "a day later the opening isn't news");
+    assert.deepEqual(await keys(UNLOCK + LEN + 60_000, 2, [r1]), ["round-result:1"]);
+    assert.deepEqual(await keys(UNLOCK + LEN + 25 * 3_600_000, 2, [r1]), []);
+    // Before the unlock: nothing.
+    const before = await dueDrafts(UNLOCK - 60_000, { ...sources(), tournament: async () => ({ round: { ...round(1, UNLOCK - 60_000), status: "upcoming" }, past: [] }) });
+    assert.ok(!before.drafts.some((d) => d.kind === "tournament"));
+    // Posted once, even across runs.
+    env(A.env, "on");
+    env(GATEWAY.keyEnv, "test-key");
+    const src = { ...sources(), tournament: async () => ({ round: round(1, UNLOCK + 60_000), past: [] }) };
+    const first = await runAutoPost({ now: UNLOCK + 60_000, fetch: gateway(), sources: src });
+    assert.ok(first.posted.some((p) => p.key === "round-open:1"));
+    const again = await runAutoPost({ now: UNLOCK + 60_000 + 3_600_000, fetch: gateway(), sources: src });
+    assert.ok(!again.posted.some((p) => p.key === "round-open:1"));
   });
 
   it("dueDrafts doesn't announce a launch that isn't verified", async () => {

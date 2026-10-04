@@ -66,6 +66,14 @@ export interface Pitch {
   votingPower: number;
   submittedAt: string;
   roundId: string;
+  /** Real pitches only (lib/tournament/results.ts). */
+  agentId?: string;
+  ticker?: string;
+  fighterToken?: Address;
+  demoUrl?: string | null;
+  /** Masters' scores (1 to TOURNAMENT.scoreMax): the average, and how many Masters scored. */
+  scoreAvg?: number | null;
+  scoreCount?: number;
 }
 
 export interface Tender {
@@ -84,13 +92,20 @@ export interface PastRound {
   number: number;
   startedAt: string;
   endedAt: string;
-  snapshotBlock: string;
-  eligibleWallets: number;
+  /** null when no snapshot was taken (nobody voted or pitched that round). */
+  snapshotBlock: string | null;
+  /** Counting every eligible holder needs a full token indexer: null shows "n/a". */
+  eligibleWallets: number | null;
   votesCast: number;
-  winnerPitchId: string;
-  winnerTitle: string;
-  winnerFighter: string;
-  poolCredits: number;
+  /** null when no pitch received a vote. */
+  winnerPitchId: string | null;
+  winnerTitle: string | null;
+  winnerFighter: string | null;
+  /** The round pool in whole $CREDIT, or null while the per-round cap isn't set. */
+  poolCredits: number | null;
+  pitchCount?: number;
+  /** The top places, best first. */
+  top?: { id: string; title: string; fighter: string; votes: number; votingPower: number }[];
 }
 
 export interface VoterRank {

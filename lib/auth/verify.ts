@@ -17,7 +17,7 @@ export async function verifySignIn(message: string, signature: string, now = Dat
   if (!fields) return { ok: false, reason: "Message is not a valid Moofield sign-in" };
   if (!/^0x[0-9a-fA-F]+$/.test(signature)) return { ok: false, reason: "Invalid signature format" };
 
-  const nonce = consumeNonce(fields.nonce, fields.address, fields.issuedAt, now);
+  const nonce = await consumeNonce(fields.nonce, fields.address, fields.issuedAt, now);
   if (!nonce.ok) return nonce;
 
   const client = publicClientOrNull();

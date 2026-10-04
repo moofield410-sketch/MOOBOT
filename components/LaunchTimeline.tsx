@@ -36,7 +36,7 @@ export function LaunchTimeline() {
     {
       at: timeline.fullUnlockAt,
       label: `${FULL_UNLOCK_AFTER_H} hours later`,
-      detail: "The Tournament board, leaderboard and rewards ledger unlock, and the Round 1 clock starts. Pitch and vote submission are still being built.",
+      detail: "The Tournament opens with Round 1: Fighters pitch, the Crowd votes with $ORBIO, and Masters score and post tenders.",
     },
   ];
 

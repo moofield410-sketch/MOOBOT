@@ -13,7 +13,7 @@ export default function PrivacyPage() {
         { h: "No account needed", p: "You can browse without signing up or connecting a wallet." },
         {
           h: "Wallet data",
-          p: "When you connect a wallet, the site reads public balances for your address. Signing in checks a free signed message and is not stored; once voting is built, votes will be stored as signed messages. Signatures cannot move funds.",
+          p: "When you connect a wallet, the site reads public balances for your address. Signing in checks a free signed message and is not stored. Pitches, votes, Master scores and tenders are stored with the message you signed and your wallet address, and are published in each round's public audit log. Signatures cannot move funds.",
         },
         {
           h: "Your browser",

@@ -3,6 +3,7 @@ import { AGENT_LIVE_AT, FULL_UNLOCK_AFTER_H, GATEWAY, SITE, SOCIAL } from "@/con
 import { sessionSecret } from "@/lib/auth/session";
 import { readDoc } from "@/lib/docs.server";
 import { DOCS } from "@/lib/docs";
+import { getTournamentState } from "@/lib/tournament";
 import { utcDay } from "@/lib/field-fund-history";
 import { formatInt, formatUtcDateTime } from "@/lib/format";
 import { kvGet, kvSet } from "@/lib/kv";
@@ -123,7 +124,7 @@ async function liveFacts(): Promise<string[]> {
     `Go-live (MooBot wakes): ${formatUtcDateTime(t.agentLiveAt)}. The Tournament unlocks ${formatUtcDateTime(t.fullUnlockAt)}.`,
     `Official X account: ${SOCIAL.xHandle}.`,
   ];
-  const [moobot, masters, totals] = await Promise.allSettled([getMooBot(), getMasters(), getOrbioTotals()]);
+  const [moobot, masters, totals, tournament] = await Promise.allSettled([getMooBot(), getMasters(), getOrbioTotals(), getTournamentState()]);
   if (moobot.status === "fulfilled") {
     const m = moobot.value;
     facts.push(
@@ -134,6 +135,13 @@ async function liveFacts(): Promise<string[]> {
   }
   if (masters.status === "fulfilled" && masters.value.data) facts.push(`Graduated Masters on the site right now: ${formatInt(masters.value.data.length)}.`);
   if (totals.status === "fulfilled" && totals.value.data?.agents != null) facts.push(`Agents on the Orbio launchpad: ${formatInt(totals.value.data.agents)}.`);
+  const tour = tournament.status === "fulfilled" ? tournament.value.data : null;
+  if (tour?.round.status === "live") {
+    const votes = tour.pitches.reduce((n, p) => n + p.votes, 0);
+    facts.push(
+      `The Tournament is open: Round ${tour.round.number} runs until ${formatUtcDateTime(tour.round.endsAt)}, with ${formatInt(tour.pitches.length)} pitches and ${formatInt(votes)} votes so far. Pitch and vote on the Tournament page.`,
+    );
+  }
   return facts;
 }
 

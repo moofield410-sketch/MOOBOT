@@ -30,8 +30,8 @@ export default async function MasterProfilePage({ params }: Props) {
   const { master: m, meta } = await getMaster(token);
   if (!m) notFound();
 
-  const pitches = getPitches().data?.filter((p) => p.masterToken === m.tokenAddress) ?? [];
-  const tenders = getTenders().data?.filter((t) => t.masterToken === m.tokenAddress) ?? [];
+  const pitches = (await getPitches()).data?.filter((p) => p.masterToken === m.tokenAddress) ?? [];
+  const tenders = (await getTenders()).data?.filter((t) => t.masterToken === m.tokenAddress) ?? [];
   const na = <NotAvailable reason={NA_REASONS.orbioMissing} />;
 
   return (

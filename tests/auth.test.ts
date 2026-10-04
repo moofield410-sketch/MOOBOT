@@ -11,7 +11,7 @@ import { verifySignIn } from "@/lib/auth/verify";
 const account = privateKeyToAccount(generatePrivateKey());
 
 async function signedRequest(now = Date.now()) {
-  const { nonce, issuedAt } = issueNonce(account.address, now);
+  const { nonce, issuedAt } = issueNonce(account.address, now)!;
   const message = buildSignInMessage({ address: account.address, chainId: CHAIN.id, nonce, issuedAt });
   const signature = await account.signMessage({ message });
   return { message, signature };
@@ -36,23 +36,32 @@ describe("sign-in message", () => {
 });
 
 describe("nonces", () => {
-  it("can be used only once", () => {
+  it("can be used only once", async () => {
     const now = Date.now();
-    const { nonce, issuedAt } = issueNonce(account.address, now);
-    assert.deepEqual(consumeNonce(nonce, account.address, issuedAt, now), { ok: true });
-    assert.equal(consumeNonce(nonce, account.address, issuedAt, now).ok, false);
+    const { nonce, issuedAt } = issueNonce(account.address, now)!;
+    assert.deepEqual(await consumeNonce(nonce, account.address, issuedAt, now), { ok: true });
+    assert.equal((await consumeNonce(nonce, account.address, issuedAt, now)).ok, false);
   });
 
-  it("expire after the TTL", () => {
+  it("expire after the TTL", async () => {
     const now = Date.now();
-    const { nonce, issuedAt } = issueNonce(account.address, now);
-    assert.equal(consumeNonce(nonce, account.address, issuedAt, now + AUTH.nonceTtlMs + 1).ok, false);
+    const { nonce, issuedAt } = issueNonce(account.address, now)!;
+    assert.equal((await consumeNonce(nonce, account.address, issuedAt, now + AUTH.nonceTtlMs + 1)).ok, false);
   });
 
-  it("are bound to the address they were issued to", () => {
+  it("are bound to the address and time they were issued for", async () => {
     const now = Date.now();
-    const { nonce, issuedAt } = issueNonce(account.address, now);
-    assert.equal(consumeNonce(nonce, "0x0000000000000000000000000000000000000001", issuedAt, now).ok, false);
+    const { nonce, issuedAt } = issueNonce(account.address, now)!;
+    assert.equal((await consumeNonce(nonce, "0x0000000000000000000000000000000000000001", issuedAt, now)).ok, false);
+    assert.equal((await consumeNonce(nonce, account.address, new Date(now - 1000).toISOString(), now)).ok, false);
+  });
+
+  it("need no server memory: another instance (same secret) accepts them", async () => {
+    const now = Date.now();
+    const { nonce, issuedAt } = issueNonce(account.address, now)!;
+    const g = globalThis as unknown as { __moobotNonces?: unknown };
+    assert.equal(g.__moobotNonces, undefined);
+    assert.deepEqual(await consumeNonce(nonce, account.address, issuedAt, now), { ok: true });
   });
 });
 

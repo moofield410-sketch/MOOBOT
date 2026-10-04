@@ -15,6 +15,8 @@ import { StatRow, StatTile } from "@/components/ui/Stats";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { ConnectOptions } from "@/components/wallet/WalletMenu";
 import { useSession } from "@/components/wallet/useSession";
+import { useTournamentMe } from "@/components/tournament/useTournament";
+import { formatCredits } from "@/lib/rewards";
 import { AUTH, CHAIN, HOLDER_AURA_TIERS, VOTING } from "@/config";
 import { formatUpdated, formatUtcDateTime } from "@/lib/format";
 import type { DataEnvelope, OwnedAgent, TokenBalance, WalletBalances } from "@/lib/types";
@@ -53,6 +55,7 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
   useEffect(() => setMounted(true), []);
 
   const balances = useWalletBalances(address);
+  const me = useTournamentMe();
   const agents = useQuery({
     queryKey: ["wallet-agents", address],
     queryFn: () => getJson<DataEnvelope<OwnedAgent[]>>(`/api/wallet/${address}/agents`),
@@ -73,6 +76,13 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
   const snapshotAt = timeline?.fullUnlockAt ?? null;
   const snapshotTaken = synced && snapshotAt !== null && now >= snapshotAt;
   const meets = b?.meetsVotingMinimum ?? null;
+  const t = me.data ?? null;
+  const live = t?.round.status === "live";
+  const snapshotText = () => {
+    if (live && t?.power) return `Block ${Number(t.power.block).toLocaleString("en-US")} (Round ${t.round.number} start)`;
+    if (live) return `Taken at ${formatUtcDateTime(t!.round.startsAt)}`;
+    return snapshotAt === null ? "…" : `Taken at ${formatUtcDateTime(snapshotAt)}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -134,19 +144,32 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
         <Card title="Voting eligibility" meta={balances.data ? { updatedAt: balances.data.updatedAt, stale: balances.data.stale } : undefined}>
           <dl>
             <StatRow label="Minimum" value={`${VOTING.minOrbio.toLocaleString("en-US")} $ORBIO at the snapshot`} />
-            <StatRow
-              label="Round 1 snapshot"
-              value={snapshotAt === null ? "…" : snapshotTaken ? "Snapshot block: n/a" : `Taken at ${formatUtcDateTime(snapshotAt)}`}
-            />
-            <StatRow
-              label="Your current balance"
-              value={meets === null ? <NotAvailable reason={naReason(b?.orbio)} /> : meets ? "Meets the minimum" : "Below the minimum"}
-            />
+            <StatRow label={live ? `Round ${t!.round.number} snapshot` : "Round 1 snapshot"} value={snapshotText()} />
+            {live && t?.power ? (
+              <>
+                <StatRow label="Your $ORBIO at the snapshot" value={t.power.balance.toLocaleString("en-US")} />
+                <StatRow label="Your voting power" value={t.power.power > 0 ? t.power.power.toLocaleString("en-US") : "None (below the minimum)"} />
+              </>
+            ) : (
+              <StatRow
+                label="Your current balance"
+                value={meets === null ? <NotAvailable reason={naReason(b?.orbio)} /> : meets ? "Meets the minimum" : "Below the minimum"}
+              />
+            )}
+            {live && <StatRow label="Your vote this round" value={t?.vote ? `Cast · power ${t.vote.power.toLocaleString("en-US")}` : "Not cast yet"} />}
           </dl>
           <p className="mt-4 text-sm text-soil/80">
-            {snapshotTaken
-              ? "Snapshot records aren't available yet, so eligibility is shown from your current balance. Voting itself is coming soon."
-              : "The snapshot hasn't been taken yet. Your voting power will be based on your balance at that moment, not today."}
+            {live && t?.power
+              ? t.vote
+                ? "Your vote is in. The first vote in a round is final."
+                : t.power.power > 0
+                  ? "You can vote once this round: pick a pitch on the Tournament board."
+                  : "You can't vote this round. Voting power comes from your balance at the snapshot block, so buying now counts from the next round."
+              : live && t?.powerError
+                ? t.powerError
+                : snapshotTaken
+                  ? "Checking your balance at the snapshot block…"
+                  : "The snapshot hasn't been taken yet. Your voting power will be based on your balance at that moment, not today."}
           </p>
         </Card>
 
@@ -182,10 +205,25 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
 
       <Card eyebrow="Rewards ledger" title="Your rewards">
         <LockGate feature="rewardsLedgerOpen" title="The rewards ledger opens in" minHeight="14rem">
-          {/* No round has finished, so no rewards exist yet. The ledger fills in once rounds are scored. */}
-          <EmptyState title="No rewards yet" plain>
-            <p>Rewards from pitches, votes and Masters&apos; shares will appear here once rounds are scored. Displayed, not paid.</p>
-          </EmptyState>
+          {t && t.ledger.length > 0 ? (
+            <ul className="divide-y divide-line">
+              {t.ledger.map((e, i) => (
+                <li key={`${e.round}-${e.role}-${i}`} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                  <div>
+                    <p className="text-soil">{e.label}</p>
+                    <p className="text-xs text-soil/60">Round {e.round} · displayed, not paid</p>
+                  </div>
+                  <span className="font-mono font-semibold tabular-nums text-soil">
+                    {e.amountAtoms === null ? <NotAvailable reason={NA_REASONS.capNotSet} /> : `${formatCredits(e.amountAtoms)} $CREDIT`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState title="No rewards yet" plain>
+              <p>Rewards from pitches, votes and Masters&apos; shares appear here once a round you took part in ends. Displayed, not paid.</p>
+            </EmptyState>
+          )}
         </LockGate>
       </Card>
 

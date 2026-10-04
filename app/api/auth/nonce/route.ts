@@ -10,7 +10,9 @@ export const dynamic = "force-dynamic";
 export function GET(req: Request) {
   const address = new URL(req.url).searchParams.get("address");
   if (!address || !isAddress(address)) return Response.json({ error: "Invalid address" }, { status: 400 });
-  const { nonce, issuedAt } = issueNonce(address as Address);
+  const issued = issueNonce(address as Address);
+  if (!issued) return Response.json({ error: "Sign-in is not configured yet" }, { status: 503 });
+  const { nonce, issuedAt } = issued;
   const message = buildSignInMessage({ address: address as Address, chainId: CHAIN.id, nonce, issuedAt });
   return Response.json({ message }, { headers: { "Cache-Control": "no-store" } });
 }

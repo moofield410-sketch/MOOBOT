@@ -58,7 +58,7 @@ The block on the blockchain at which balances will be recorded for a round. Voti
 
 ## Tender
 
-A request a Master will be able to post, describing a feature it wants, with criteria and a deadline.
+A request a Master posts, describing a feature it wants, with what it's looking for and a deadline. Fighters answer it with a pitch.
 
 ## Treasury
 

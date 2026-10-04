@@ -124,9 +124,9 @@ describe("API routes with real data", { skip: USE_MOCK_DATA ? "USE_MOCK_DATA is 
   });
 
   it("/api/pitches, /api/tenders and /api/leaderboard are real and empty", async () => {
-    const p = await json(pitches());
-    const t = await json(tenders());
-    const l = await json(leaderboard());
+    const p = await json(await pitches());
+    const t = await json(await tenders());
+    const l = await json(await leaderboard());
     assert.deepEqual([p.source, t.source, l.source], ["live", "live", "live"]);
     assert.deepEqual(p.data, []);
     assert.deepEqual(t.data, []);
@@ -134,25 +134,26 @@ describe("API routes with real data", { skip: USE_MOCK_DATA ? "USE_MOCK_DATA is 
   });
 
   it("never returns any sample Tournament record", async () => {
-    const all = JSON.stringify([await json(pitches()), await json(tenders()), await json(leaderboard()), await json(roundsCurrent())]);
+    const all = JSON.stringify([await json(await pitches()), await json(await tenders()), await json(await leaderboard()), await json(await roundsCurrent())]);
     const ids = [
       ...SAMPLE_PITCHES.flatMap((x) => [x.id, x.title, x.fighter]),
       ...SAMPLE_TENDERS.flatMap((x) => [x.id, x.title]),
-      ...SAMPLE_PAST_ROUNDS.flatMap((x) => [x.id, x.winnerTitle]),
+      ...SAMPLE_PAST_ROUNDS.flatMap((x) => [x.id, x.winnerTitle ?? x.id]),
       ...SAMPLE_VOTERS.map((x) => x.wallet),
     ];
     for (const id of ids) assert.ok(!all.includes(id), `sample value leaked: ${id}`);
   });
 
   it("/api/rounds/current follows the server timeline, with no finished round yet", async () => {
-    const body = await json(roundsCurrent());
+    const body = await json(await roundsCurrent());
     assert.ok(typeof body.serverNow === "number");
     assert.ok(["upcoming", "live"].includes(body.round.status));
     assert.equal(body.round.endsAt - body.round.startsAt, 72 * 3_600_000);
     assert.equal(typeof body.tournamentUnlocked, "boolean");
     assert.equal(body.votingOpen, undefined, "no label that claims voting is open");
-    assert.equal(body.voteSubmission, "planned");
-    assert.equal(body.pitchSubmission, "planned");
+    const open = body.round.status === "live" ? "open" : "not-open-yet";
+    assert.equal(body.voteSubmission, open);
+    assert.equal(body.pitchSubmission, open);
     assert.equal(body.lastRound, null);
     assert.equal(body.source, "live");
   });

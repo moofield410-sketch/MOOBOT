@@ -17,7 +17,7 @@ Every build runs an automatic check of the code for transaction, approval and wa
 Your wallet is used for these things only:
 
 1. [[Live]] **Reading your balances** of $ORBIO, and of $MOOBOT once it is launched. Reading is public and harmless.
-2. [[Live]] **Signing a free message** to sign in. [[Planned]] The same kind of message will be used to vote. The message says in plain text: "This signature costs no gas and cannot move funds."
+2. [[Live]] **Signing a free message** to sign in, and [[Opens]] to pitch, vote, score or post a tender. Every message says in plain text: "This signature costs no gas and cannot move funds.", and shows exactly what you are agreeing to.
 
 If your wallet ever shows a transaction or an approval request while you use this site, **reject it** and close the site.
 
@@ -37,7 +37,8 @@ Moofield will never DM you an address, ask you to "verify" a wallet, or ask for 
 ## Everything is checkable
 
 - [[Live]] The Masters list comes from the agent data of Orbio ([@orbiodotso](https://x.com/orbiodotso)), refreshed when someone visits (at most every {{MASTERS_REFRESH_MIN}} minutes), and each Master links to its token on the block explorer.
-- [[Planned]] Each round will publish its snapshot block, the number of eligible wallets and a downloadable list.
+- [[Opens]] Each round publishes its snapshot block and an audit log of every signed pitch, vote and score, so anyone can re-check the signatures.
+- [[Planned]] A count and downloadable list of every wallet eligible at the snapshot.
 - [[Live]] Data cards show when they were last updated, and warn you if the data may be out of date.
 - [[Live]] Figures that aren't available show **n/a** with a short reason. Nothing is invented.
 - [[Live]] The [Status](/status) page shows the health of the data sources and the $MOOBOT contract check.
