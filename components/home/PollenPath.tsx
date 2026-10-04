@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MooBotMascot, type MascotState } from "@/components/MooBotMascot";
 import { playSfx, primeSound } from "@/components/sound/engine";
+import { showWholeGame } from "@/components/home/game-view";
 import { GameSoundButton } from "@/components/sound/SoundToggle";
 import { dailyFieldId, seededRng, type Rng } from "@/lib/bloom-pop";
 import * as P from "@/lib/pollen-path";
@@ -307,6 +308,7 @@ export function PollenPath() {
     setMood("idle");
     setStatus("playing");
     canvasRef.current?.focus({ preventScroll: true });
+    showWholeGame(wrapRef.current);
   }, [setStatus]);
 
   /** MooBot catches Bumble: back on the same flower, same count. */
@@ -432,7 +434,7 @@ export function PollenPath() {
   const playing = status === "playing";
 
   return (
-    <div className="w-full max-w-[420px]">
+    <div className="game-width">
       <div className="mb-3 flex items-center justify-between gap-4 px-1 font-display text-sm text-fern">
         <span>
           Flowers <span className="ml-1 font-mono text-base font-semibold tabular-nums text-soil">{score}</span>
@@ -442,6 +444,7 @@ export function PollenPath() {
         </span>
         <GameSoundButton />
       </div>
+      <p className="mb-2 hidden px-1 text-xs text-fern short-landscape:pointer-coarse:block">Turn your phone upright to see the whole meadow.</p>
 
       <div
         ref={wrapRef}
@@ -501,7 +504,9 @@ export function PollenPath() {
           </div>
         )}
       </div>
-      <p className="mt-3 px-1 text-xs text-fern">Tap or click the meadow to dash. Keyboard: Space or Enter.</p>
+      <p className="mt-3 px-1 text-xs text-fern">
+        Tap or click the meadow to dash.<span className="pointer-coarse:hidden"> Keyboard: Space or Enter.</span>
+      </p>
     </div>
   );
 }

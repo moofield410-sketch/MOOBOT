@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSyncExternalStore } from "react";
 import { MooBotMascot } from "@/components/MooBotMascot";
 import { MooBotMarket } from "@/components/moobot/MooBotMarket";
 import { useMooBot } from "@/components/moobot/useMooBot";
@@ -8,6 +9,7 @@ import { Thinking } from "@/components/ui/Card";
 import { CopyButton } from "@/components/ui/CopyButton";
 
 const VERIFY_HREF = "/docs/safety#how-to-verify-the-official-moobot-contract";
+const noop = () => () => {};
 
 /**
  * "Official $MOOBOT contract". Shows the address only once it is verified on the Orbio API
@@ -15,7 +17,13 @@ const VERIFY_HREF = "/docs/safety#how-to-verify-the-official-moobot-contract";
  * `compact` (footer and Docs) shows the address only.
  */
 export function OfficialMooBotCard({ compact = false }: { compact?: boolean }) {
-  const { data, isLoading, isError } = useMooBot();
+  const query = useMooBot();
+  // Another component on the page may fill the shared query cache before this one hydrates, so the
+  // first client render shows "Checking…" like the server did, then switches to the answer.
+  const hydrated = useSyncExternalStore(noop, () => true, () => false);
+  const isLoading = !hydrated || query.isLoading;
+  const isError = hydrated && query.isError;
+  const data = hydrated ? query.data : undefined;
   const verified = data?.status === "verified" ? data : null;
 
   return (

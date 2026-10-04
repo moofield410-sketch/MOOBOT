@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MooBotMascot, type MascotState } from "@/components/MooBotMascot";
 import { playSfx, primeSound } from "@/components/sound/engine";
+import { showWholeGame } from "@/components/home/game-view";
 import { GameSoundButton } from "@/components/sound/SoundToggle";
 import { SOCIAL } from "@/config";
 import * as G from "@/lib/bloom-pop";
@@ -498,6 +499,7 @@ export function BloomPop() {
       setMood("idle");
       setStatus("playing");
       canvasRef.current?.focus({ preventScroll: true });
+      showWholeGame(wrapRef.current);
     },
     [setStatus],
   );
@@ -596,7 +598,7 @@ export function BloomPop() {
   const playing = status === "playing";
 
   return (
-    <div className="w-full max-w-[420px]">
+    <div className="game-width">
       <div className="mb-3 flex items-center justify-between gap-4 px-1 font-display text-sm text-fern">
         <span>
           Score <span className="ml-1 font-mono text-base font-semibold tabular-nums text-soil">{score}</span>
@@ -609,6 +611,7 @@ export function BloomPop() {
         </span>
         <GameSoundButton />
       </div>
+      <p className="mb-2 hidden px-1 text-xs text-fern short-landscape:pointer-coarse:block">Turn your phone upright to see the whole field.</p>
 
       <div ref={wrapRef} className="relative w-full overflow-hidden rounded-2xl border border-line bg-milk" style={{ aspectRatio: `${W} / ${H}` }}>
         {/* Soft ground at the bottom, where MooBot stands. */}
@@ -698,7 +701,10 @@ export function BloomPop() {
           </div>
         )}
       </div>
-      <p className="mt-3 px-1 text-xs text-fern">Aim with your mouse or finger, release to launch. Tap the small seed to swap. Keyboard: ← → to aim, Space to launch, S to swap.</p>
+      <p className="mt-3 px-1 text-xs text-fern">
+        Aim with your mouse or finger, release to launch. Tap the small seed to swap.
+        <span className="pointer-coarse:hidden"> Keyboard: ← → to aim, Space to launch, S to swap.</span>
+      </p>
     </div>
   );
 }

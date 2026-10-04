@@ -105,7 +105,7 @@ export function GameSoundButton() {
       aria-pressed={s.effects}
       aria-label={s.effects ? "Mute game sounds" : "Turn game sounds on"}
       title={s.effects ? "Mute game sounds" : "Turn game sounds on"}
-      className="hit-44 -my-2 grid h-8 w-8 place-items-center rounded-full text-fern hover:text-soil"
+      className="hit-44 -my-2 grid h-8 w-8 shrink-0 place-items-center rounded-full text-fern hover:text-soil"
     >
       <SpeakerIcon muted={!s.effects} className="h-4 w-4" />
     </button>

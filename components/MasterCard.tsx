@@ -59,15 +59,17 @@ export function MasterCard({ m }: { m: Master }) {
       <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-4 text-sm">
         <div>
           <dt className="text-[11px] uppercase tracking-wider text-fern">Holders</dt>
-          <dd className="font-mono font-medium tabular-nums text-soil">{m.holderCount === null ? na : formatCompact(m.holderCount)}</dd>
+          <dd className="whitespace-nowrap font-mono font-medium tabular-nums text-soil">{m.holderCount === null ? na : formatCompact(m.holderCount)}</dd>
         </div>
         <div>
           <dt className="text-[11px] uppercase tracking-wider text-fern">{m.isMock ? "Liquidity" : "Market cap"}</dt>
-          <dd className="font-mono font-medium tabular-nums text-soil">{usd === null ? na : formatUsd(usd)}</dd>
+          <dd className="whitespace-nowrap font-mono font-medium tabular-nums text-soil" title={usd === null ? undefined : formatUsd(usd)}>
+            {usd === null ? na : `$${formatCompact(usd)}`}
+          </dd>
         </div>
         <div>
           <dt className="text-[11px] uppercase tracking-wider text-fern">{m.graduatedAt ? "Graduated" : "Launched"}</dt>
-          <dd className="font-mono font-medium tabular-nums text-soil">{m.graduatedAt || m.launchedAt ? shortDate(m.graduatedAt ?? m.launchedAt) : na}</dd>
+          <dd className="whitespace-nowrap font-mono font-medium tabular-nums text-soil">{m.graduatedAt || m.launchedAt ? shortDate(m.graduatedAt ?? m.launchedAt) : na}</dd>
         </div>
       </dl>
 

@@ -188,7 +188,7 @@ export function MooBotGuide() {
     <button
       type="button"
       aria-label="Move MooBot. Drag, or use the arrow keys."
-      className="hidden cursor-grab touch-none px-1 text-sm text-soil/60 hover:text-soil active:cursor-grabbing sm:block"
+      className="hit-44 hidden cursor-grab touch-none px-1 text-sm text-soil/60 hover:text-soil active:cursor-grabbing sm:block"
       {...dragHandlers}
       onKeyDown={onKeyDown}
     >

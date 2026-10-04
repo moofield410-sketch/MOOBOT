@@ -772,6 +772,16 @@ html.reveal-ready [data-reveal-stagger]:not(.is-revealed) > * {
   }
 }
 
+/* A game (score bar + 368×580 board): at most 420px wide, and narrow enough on short screens that
+   the whole board fits under the header, but never narrower than 280px. */
+@utility game-width {
+  width: 100%;
+  max-width: min(420px, max(280px, calc((100svh - 9rem) * 368 / 580)));
+}
+
+/* A phone held sideways: too short for a whole game board. */
+@custom-variant short-landscape (@media (orientation: landscape) and (max-height: 500px));
+
 /* Standalone links (footer lists, back links): 44px tall on touch screens. */
 @utility tap {
   @media (pointer: coarse) {
