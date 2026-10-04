@@ -30,6 +30,8 @@ const FRIENDLY: Record<number, string> = {
   502: "Orbio's provider failed",
 };
 
+const obj = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : null);
+
 export function gatewayKey(): string | null {
   const k = process.env[GATEWAY.keyEnv]?.trim();
   return k ? k : null;
@@ -44,11 +46,15 @@ async function post(path: string, body: unknown, f: GatewayFetch): Promise<{ sta
     body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => null);
-  if (res.status >= 400) throw new GatewayError(res.status, FRIENDLY[res.status] ?? `Orbio returned ${res.status}`);
+  if (res.status >= 400) {
+    // Orbio's own reason (e.g. which argument or the quote), shown on the Status page. It never contains the key.
+    const e = obj(json);
+    const detail = [e?.error, e?.message, obj(e?.error)?.message].find((v): v is string => typeof v === "string" && v.trim() !== "");
+    const base = FRIENDLY[res.status] ?? `Orbio returned ${res.status}`;
+    throw new GatewayError(res.status, detail ? `${base}: ${detail.trim().slice(0, 200)}` : base);
+  }
   return { status: res.status, body: json };
 }
-
-const obj = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : null);
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";

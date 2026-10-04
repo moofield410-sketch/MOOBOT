@@ -16,7 +16,7 @@ import { buildTimeline } from "@/lib/schedule";
 /**
  * "Talk to MooBot": a short AI chat about Moofield, answered by Orbio's model gateway and paid
  * from the owner's Orbio balance. SERVER-SIDE ONLY. Off unless MOOBOT_CHAT=on and ORBIO_API_KEY
- * is set. Hard limits: GATEWAY.chat.dailyBudgetUsd per UTC day for everyone together, and
+ * is set. Limits: GATEWAY.chat.dailyBudgetUsd per UTC day for everyone together (null = none), and
  * perVisitorPerDay questions per visitor. Messages are never stored.
  */
 
@@ -57,6 +57,11 @@ export function worstCaseUsd(promptChars: number): number {
   return Math.ceil(promptChars / 3) * C.pricePerInputToken + C.maxTokens * C.pricePerOutputToken;
 }
 
+/** Whether a call that could cost `worstUsd` would pass the daily budget. Never, with no budget set. */
+export function overBudget(spentUsd: number, worstUsd: number, budgetUsd: number | null = C.dailyBudgetUsd): boolean {
+  return budgetUsd !== null && spentUsd + worstUsd > budgetUsd;
+}
+
 export function actualUsd(inputTokens: number | null, outputTokens: number | null, worstCase: number): number {
   if (inputTokens === null || outputTokens === null) return worstCase;
   return inputTokens * C.pricePerInputToken + outputTokens * C.pricePerOutputToken;
@@ -94,7 +99,7 @@ export async function chatUsage(ip: string, now = Date.now()): Promise<ChatUsage
   return {
     enabled: true,
     remainingToday: Math.max(0, C.perVisitorPerDay - (l.visitors[visitorId(ip, day)] ?? 0)),
-    resting: l.spentUsd + worstCaseUsd(0) > C.dailyBudgetUsd,
+    resting: overBudget(l.spentUsd, worstCaseUsd(0)),
   };
 }
 
@@ -208,7 +213,7 @@ export async function askMooBot(
   if (used >= C.perVisitorPerDay) {
     return { ok: false, reason: "visitor-limit", message: "That's all my questions for today. Come back after 00:00 UTC! 🐄", remainingToday: 0 };
   }
-  if (ledger.spentUsd + worst > C.dailyBudgetUsd) {
+  if (overBudget(ledger.spentUsd, worst)) {
     return { ok: false, reason: "resting", message: "MooBot is resting until 00:00 UTC. The Docs have every answer in the meantime.", remainingToday: C.perVisitorPerDay - used };
   }
   await kvSet(ledgerKey(day), { spentUsd: ledger.spentUsd + worst, visitors: { ...ledger.visitors, [who]: used + 1 } });

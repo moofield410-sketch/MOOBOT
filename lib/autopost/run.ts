@@ -6,7 +6,7 @@ import { formatMicroUsd } from "@/lib/format";
 import { kvGet, kvSet } from "@/lib/kv";
 import { errorMessage, reportError } from "@/lib/monitoring";
 import { getMooBot, getMooBotChart, type MooBotChartState, type MooBotState } from "@/lib/moobot";
-import { callTool, gatewayKey, type GatewayFetch } from "@/lib/orbio-gateway";
+import { callTool, gatewayKey, GatewayError, type GatewayFetch } from "@/lib/orbio-gateway";
 import { getOrbioTotals } from "@/lib/orbio-totals";
 import { getMasters } from "@/lib/registry";
 import { formatCredits } from "@/lib/rewards";
@@ -132,15 +132,26 @@ export interface RunReport {
   mode: AutoPostMode;
   posted: PostRecord[];
   drafted: string[];
+  /** Held back by the daily caps; tried again later. */
   skipped: string[];
+  /** Refused by Orbio for that post alone; tried again next run. */
+  failed: string[];
   error: string | null;
+}
+
+/** The cap sent with each post: text, plus one more post's worth for each image (X meters uploads as posts). */
+export const maxCost = (d: Draft) => (A.postMaxCost + A.perImageMaxCost * (d.media?.length ?? 0)).toFixed(4);
+
+/** Kinds listed in AUTO_POST_SKIP are never posted or drafted, e.g. "launch" after posting it by hand. */
+export function skippedKinds(): Set<string> {
+  return new Set((process.env[A.skipEnv] ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
 }
 
 /** One auto-post run. Never throws: problems are logged and retried on the next run. */
 export async function runAutoPost(opts: { now?: number; fetch?: GatewayFetch; sources?: AutoPostSources } = {}): Promise<RunReport> {
   const now = opts.now ?? Date.now();
   const mode = autoPostMode();
-  const report: RunReport = { mode, posted: [], drafted: [], skipped: [], error: null };
+  const report: RunReport = { mode, posted: [], drafted: [], skipped: [], failed: [], error: null };
   if (mode === "off") return report;
 
   const log = (await kvGet<Log>(LOG)) ?? emptyLog();
@@ -149,7 +160,8 @@ export async function runAutoPost(opts: { now?: number; fetch?: GatewayFetch; so
 
   try {
     const { drafts, graduated } = await dueDrafts(now, opts.sources ?? realSources);
-    const pending = drafts.filter((d) => !log.posted[d.key]);
+    const skip = skippedKinds();
+    const pending = drafts.filter((d) => !log.posted[d.key] && !skip.has(d.kind));
 
     if (mode === "preview") {
       const saved = (await kvGet<DraftRecord[]>(DRAFTS)) ?? [];
@@ -158,16 +170,29 @@ export async function runAutoPost(opts: { now?: number; fetch?: GatewayFetch; so
       report.drafted = pending.map((d) => d.key);
     } else {
       if (!gatewayKey()) throw new Error("AUTO_POST is on but ORBIO_API_KEY is not set");
+      const problems: string[] = [];
       for (const d of pending) {
         if (count.posts >= A.postsPerDay || (d.kind === "graduation" && count.graduations >= A.graduationsPerDay)) {
           report.skipped.push(d.key);
           continue;
         }
-        const r = await callTool(
-          "social.post",
-          { text: d.text, platforms: ["twitter"], ...(d.media ? { media: d.media } : {}), allow_links: false, max_cost: A.postMaxCost },
-          opts.fetch,
-        );
+        let r;
+        try {
+          r = await callTool(
+            "social.post",
+            { text: d.text, platforms: ["twitter"], ...(d.media ? { media: d.media } : {}), allow_links: false, max_cost: maxCost(d) },
+            opts.fetch,
+          );
+        } catch (err) {
+          // Refused for this post only (its arguments or quote): note it and carry on with the others.
+          // Anything else (key, balance, account, rate limit, outage) stops the run until the next one.
+          if (err instanceof GatewayError && (err.status === 400 || err.status === 404)) {
+            problems.push(`${d.key}: ${err.message}`);
+            report.failed.push(d.key);
+            continue;
+          }
+          throw err;
+        }
         const result = r.status === "settled" && r.result && typeof r.result === "object" ? (r.result as Record<string, unknown>) : null;
         const platforms = Array.isArray(result?.platforms) ? (result.platforms as Record<string, unknown>[]) : [];
         const url = platforms.map((p) => p.platformPostUrl).find((u): u is string => typeof u === "string") ?? null;
@@ -178,15 +203,16 @@ export async function runAutoPost(opts: { now?: number; fetch?: GatewayFetch; so
         if (d.kind === "graduation") count.graduations++;
         report.posted.push(rec);
       }
+      if (problems.length) report.error = problems.join(" · ");
     }
 
-    // Masters drafted (preview) or announced (on) are remembered; ones held back by the daily cap come back next run.
+    // Masters drafted (preview) or announced (on) are remembered; ones held back by the daily cap or refused come back next run.
     if (graduated.length) {
-      const held = new Set(report.skipped);
+      const held = new Set([...report.skipped, ...report.failed]);
       const seen = (await kvGet<string[]>(SEEN)) ?? [];
       await kvSet(SEEN, [...seen, ...graduated.map((m) => m.tokenAddress.toLowerCase()).filter((t) => !held.has(`grad:${t}`))]);
     }
-    log.lastError = null;
+    log.lastError = report.error;
   } catch (err) {
     report.error = errorMessage(err);
     log.lastError = report.error;

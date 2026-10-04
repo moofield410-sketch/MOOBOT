@@ -4,7 +4,7 @@ import { GET as chatGet, POST as chatPost } from "@/app/api/moobot/chat/route";
 import { GATEWAY, MOOBOT_TOKEN } from "@/config";
 import { clearCache } from "@/lib/cache";
 import { kvClearMemory, kvGet } from "@/lib/kv";
-import { askMooBot, chatUsage, cleanReply, parseTurns, systemPrompt, worstCaseUsd } from "@/lib/moobot-chat";
+import { askMooBot, chatUsage, cleanReply, overBudget, parseTurns, systemPrompt, worstCaseUsd } from "@/lib/moobot-chat";
 import type { GatewayFetch } from "@/lib/orbio-gateway";
 
 /** "Talk to MooBot". A fake Orbio gateway answers; nothing real is called or spent. */
@@ -97,26 +97,19 @@ describe("MooBot chat answers", () => {
     assert.equal((await ask("someone else", answer("moo"), "5.6.7.8")).ok, true, "another visitor still can");
   });
 
-  it("never passes the daily budget: it refuses once the worst case would go over", async () => {
+  it("a daily budget, when set, refuses any call whose worst case would pass it", () => {
+    assert.equal(overBudget(2.99, 0.02, 3), true);
+    assert.equal(overBudget(2.9, 0.02, 3), false);
+    assert.equal(overBudget(1_000_000, 1, null), false, "no budget set: never refused for spending");
+  });
+
+  it("with no spending limit (the current setting) it keeps answering, records what it spends, and only the per-visitor limit applies", async () => {
+    assert.equal(C.dailyBudgetUsd, null);
     on();
-    // Every answer bills the worst case (no usage), so the budget runs out after a predictable count.
-    const noUsage: GatewayFetch = async (url, init) => {
-      calls.push({ url, auth: "", body: JSON.parse(init.body) });
-      return { status: 200, json: async () => ({ choices: [{ message: { content: "moo" } }] }) };
-    };
-    let served = 0;
-    for (let i = 0; i < 2000; i++) {
-      const r = await ask("q", noUsage, `10.0.${Math.floor(i / 250)}.${i % 250}`);
-      if (!r.ok) {
-        assert.equal(r.reason, "resting");
-        break;
-      }
-      served++;
-    }
+    for (let i = 0; i < 50; i++) assert.equal((await ask("q", answer("moo"), `10.0.0.${i}`)).ok, true);
     const ledger = await kvGet<{ spentUsd: number }>(`chat:day:${new Date().toISOString().slice(0, 10)}`);
-    assert.ok(served > 0);
-    assert.ok(ledger!.spentUsd <= C.dailyBudgetUsd, `spent ${ledger!.spentUsd}`);
-    assert.equal((await chatUsage("9.9.9.9")).resting, true);
+    assert.ok(Math.abs(ledger!.spentUsd - 50 * (2000 * C.pricePerInputToken + 100 * C.pricePerOutputToken)) < 1e-9, `spent ${ledger!.spentUsd}`);
+    assert.equal((await chatUsage("9.9.9.9")).resting, false);
   });
 
   it("a refused call (no balance) costs nothing and doesn't use up a question", async () => {

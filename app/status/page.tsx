@@ -142,7 +142,10 @@ export default async function StatusPage() {
         <Card title="Talk to MooBot">
           <dl>
             <StatRow label="Chat" value={<StatusPill tone={chatOn ? "good" : "off"}>{chatOn ? "On" : "Off"}</StatusPill>} />
-            <StatRow label="Spent today (UTC)" value={`$${chatSpend.toFixed(2)} of $${GATEWAY.chat.dailyBudgetUsd.toFixed(2)}`} />
+            <StatRow
+              label="Spent today (UTC)"
+              value={GATEWAY.chat.dailyBudgetUsd === null ? `$${chatSpend.toFixed(2)} (no daily limit)` : `$${chatSpend.toFixed(2)} of $${GATEWAY.chat.dailyBudgetUsd.toFixed(2)}`}
+            />
             <StatRow label="Questions per visitor" value={`${GATEWAY.chat.perVisitorPerDay} a day`} />
           </dl>
           {!chatOn && <p className="mt-3 text-sm text-soil/80">Turns on with MOOBOT_CHAT=on and ORBIO_API_KEY set.</p>}

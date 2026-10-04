@@ -163,8 +163,11 @@ export const GATEWAY = {
     /** US dollars per token (Orbio's model catalogue, checked 2026-10-04). One $CREDIT is one dollar. */
     pricePerInputToken: 0.000001,
     pricePerOutputToken: 0.000005,
-    /** Hard daily cap on chat spending, reset at 00:00 UTC. */
-    dailyBudgetUsd: 3,
+    /**
+     * Daily cap on chat spending in US dollars, reset at 00:00 UTC. null = no spending limit (the
+     * owner's choice, 2026-10-04): only perVisitorPerDay limits use. Spend is still recorded for Status.
+     */
+    dailyBudgetUsd: null as number | null,
     perVisitorPerDay: 10,
     maxInputChars: 500,
     /** Messages of history sent with each question (visitor and MooBot together). */
@@ -174,8 +177,15 @@ export const GATEWAY = {
   },
   autopost: {
     env: "AUTO_POST",
-    /** Most one X post may cost, in $CREDIT. A post without a link is quoted at about 0.0187. */
-    postMaxCost: "0.03",
+    /**
+     * Most one X post may cost, in $CREDIT: postMaxCost, plus perImageMaxCost for each image.
+     * Orbio's quotes (GET /api/v1/tools, 2026-10-04): 0.0187 for text, 0.0352 with one image
+     * (X bills each image upload as one more post).
+     */
+    postMaxCost: 0.02,
+    perImageMaxCost: 0.0175,
+    /** AUTO_POST_SKIP: comma-separated kinds never to post, e.g. "launch" if it was posted by hand. */
+    skipEnv: "AUTO_POST_SKIP",
     postsPerDay: 8,
     graduationsPerDay: 5,
     /** UTC hour after which the daily recap goes out. */

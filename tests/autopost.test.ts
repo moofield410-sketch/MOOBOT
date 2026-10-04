@@ -135,7 +135,7 @@ describe("Auto-post runs", () => {
   it("off does nothing at all", async () => {
     env(A.env, "off");
     const r = await runAutoPost({ now: AFTERNOON, fetch: gateway(), sources: sources({ moobot: verified }) });
-    assert.deepEqual(r, { mode: "off", posted: [], drafted: [], skipped: [], error: null });
+    assert.deepEqual(r, { mode: "off", posted: [], drafted: [], skipped: [], failed: [], error: null });
   });
 
   it("on posts each due post once, with no links allowed and the cost capped", async () => {
@@ -147,8 +147,12 @@ describe("Auto-post runs", () => {
     for (const p of posts) {
       assert.deepEqual(p.platforms, ["twitter"]);
       assert.equal(p.allow_links, false);
-      assert.equal(p.max_cost, A.postMaxCost);
     }
+    // Orbio quotes 0.0187 for text and 0.0352 with one image: each cap covers its quote and stays close to it.
+    const [launch, board, recap] = posts.map((p) => Number(p.max_cost));
+    assert.ok(launch >= 0.0352 && launch < 0.05, `launch cap ${launch}`);
+    assert.ok(board >= 0.0352 && board < 0.05, `board cap ${board}`);
+    assert.ok(recap >= 0.0187 && recap < 0.03, `recap cap ${recap}`);
     // The next run, and the next day's run, never repeat the launch.
     await runAutoPost({ now: AFTERNOON + 15 * 60_000, fetch: gateway(), sources: sources({ moobot: verified }) });
     assert.equal(posts.length, 3);
@@ -199,6 +203,38 @@ describe("Auto-post runs", () => {
     assert.equal((await autoPostStatus(AFTERNOON)).recent.length, 0);
     const retry = await runAutoPost({ now: AFTERNOON + 900_000, fetch: gateway(), sources: sources() });
     assert.ok(retry.posted.some((p) => p.key === "board:2026-10-05"));
+  });
+
+  it("a post Orbio refuses on its own (400) doesn't block the others, and Orbio's reason is kept", async () => {
+    env(A.env, "on");
+    env(GATEWAY.keyEnv, "test-key");
+    const picky: GatewayFetch = async (url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.media) return { status: 400, json: async () => ({ error: "quote 0.0352 exceeds max_cost" }) };
+      return gateway()(url, init);
+    };
+    const r = await runAutoPost({ now: AFTERNOON, fetch: picky, sources: sources({ moobot: verified }) });
+    assert.deepEqual(r.failed, ["launch", "board:2026-10-05"]);
+    assert.deepEqual(r.posted.map((p) => p.key), ["recap:2026-10-05"]);
+    assert.match(r.error ?? "", /launch: Orbio refused the request \(arguments or cost cap\): quote 0\.0352 exceeds max_cost/);
+    assert.match((await autoPostStatus(AFTERNOON)).lastError ?? "", /exceeds max_cost/);
+    // Fixed on the next run: the refused ones go out, the recap isn't repeated.
+    const next = await runAutoPost({ now: AFTERNOON + 900_000, fetch: gateway(), sources: sources({ moobot: verified }) });
+    assert.deepEqual(next.posted.map((p) => p.key), ["launch", "board:2026-10-05"]);
+    assert.equal(next.error, null);
+  });
+
+  it("AUTO_POST_SKIP=launch never posts the launch (for when it was posted by hand)", async () => {
+    env(A.env, "on");
+    env(GATEWAY.keyEnv, "test-key");
+    env(A.skipEnv, "launch");
+    try {
+      const r = await runAutoPost({ now: AFTERNOON, fetch: gateway(), sources: sources({ moobot: verified }) });
+      assert.ok(!r.posted.some((p) => p.key === "launch"));
+      assert.ok(r.posted.some((p) => p.key === "board:2026-10-05"));
+    } finally {
+      env(A.skipEnv, undefined);
+    }
   });
 
   it("on without a key posts nothing and says why", async () => {
