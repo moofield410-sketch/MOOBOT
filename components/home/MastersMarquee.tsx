@@ -14,7 +14,7 @@ export function MastersMarquee({ masters }: { masters: Master[] }) {
   const row = (copy: boolean) =>
     masters.map((m) => (
       <li key={`${copy ? "copy-" : ""}${m.tokenAddress}`} className="w-72 shrink-0 snap-start">
-        <MasterCard m={m} />
+        <MasterCard m={m} eager />
       </li>
     ));
 

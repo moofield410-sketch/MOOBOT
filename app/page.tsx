@@ -6,6 +6,7 @@ import { BloomPop, Crowley } from "@/components/home/BloomPop";
 import { HomeHero } from "@/components/home/HomeHero";
 import { Bumble, PollenPath } from "@/components/home/PollenPath";
 import { MasterSpotlight } from "@/components/home/MasterSpotlight";
+import { MasterAvatar } from "@/components/MasterCard";
 import { MastersMarquee } from "@/components/home/MastersMarquee";
 import { MooBotMascot } from "@/components/MooBotMascot";
 import { CountUp } from "@/components/motion/CountUp";
@@ -283,6 +284,7 @@ export default async function HomePage() {
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong font-mono text-sm font-semibold text-grass">
                       {p.rank}
                     </span>
+                    <MasterAvatar m={{ name: p.fighter, ticker: p.ticker ?? "", logoUrl: p.logoUrl ?? null }} size="sm" />
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-soil">{p.title}</p>
                       <p className="text-sm text-fern">

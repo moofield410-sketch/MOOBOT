@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MasterAvatar } from "@/components/MasterCard";
 import { MooBotMascot } from "@/components/MooBotMascot";
 import { StatTile } from "@/components/ui/Stats";
 import { SprigDivider } from "@/components/ui/Nature";
@@ -68,6 +69,7 @@ export default async function RecapPage({ params }: Props) {
             {r.top.map((x, i) => (
               <li key={x.id} className="flex items-center gap-3 rounded-xl border border-line bg-wash px-4 py-2.5 text-sm">
                 <span className="font-mono font-semibold text-grass">#{i + 1}</span>
+                <MasterAvatar m={{ name: x.fighter, ticker: x.ticker ?? "", logoUrl: x.logoUrl ?? null }} size="sm" />
                 <span className="min-w-0 flex-1 truncate text-soil">
                   {x.title} <span className="text-fern">· {x.fighter}</span>
                 </span>

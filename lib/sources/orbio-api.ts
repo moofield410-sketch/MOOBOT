@@ -1,7 +1,7 @@
 import { isAddress } from "viem";
 import { CHAIN, ORBIO_API, ORBIO_LINKS } from "@/config";
 import { errorMessage, reportError } from "@/lib/monitoring";
-import { safeLogoUrl } from "@/lib/safe-url";
+import { logoPath } from "@/lib/safe-url";
 import type { Address, Hash, Master, OwnedAgent } from "@/lib/types";
 
 /**
@@ -203,7 +203,7 @@ export function toMaster(a: OrbioAgent): Master {
     holderCount: null,
     explorerUrl: tokenLink(a.token),
     orbioUrl: ORBIO_LINKS.dashboard,
-    logoUrl: safeLogoUrl(a.logo),
+    logoUrl: logoPath(a.token, a.logo),
     contactRoute: null,
     openToPitches: false,
     description: a.description,
@@ -343,6 +343,6 @@ export async function fetchAgentsByWallet(wallet: Address, fetcher: Fetcher = de
     tokenAddress: a.token,
     graduated: graduated.has(a.agentId),
     explorerUrl: tokenLink(a.token),
-    logoUrl: safeLogoUrl(a.logo),
+    logoUrl: logoPath(a.token, a.logo),
   }));
 }

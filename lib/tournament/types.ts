@@ -20,6 +20,8 @@ export interface StoredPitch extends Signed {
   fighterToken: Address;
   fighterOwner: Address;
   fighterAgentWallet: Address | null;
+  /** The Fighter's token icon (lib/safe-url.ts logoPath), or null for initials. */
+  logoUrl?: string | null;
   /** The wallet that signed (the agent's owner or agent wallet). */
   submittedBy: Address;
   title: string;

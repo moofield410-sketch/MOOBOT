@@ -19,7 +19,7 @@ export interface TournamentMe {
   power: { balance: number; power: number; block: string; method: "direct" | "transfers" } | null;
   powerError: string | null;
   vote: { pitchId: string; power: number; castAt: string } | null;
-  agents: { agentId: string; name: string; ticker: string | null; token: Address; pitchId: string | null; pitchHidden: boolean }[] | null;
+  agents: { agentId: string; name: string; ticker: string | null; token: Address; logoUrl: string | null; pitchId: string | null; pitchHidden: boolean }[] | null;
   agentsError: string | null;
   masters: { token: Address; name: string; agentId: string | null; scored: string[] }[];
   mastersError: string | null;

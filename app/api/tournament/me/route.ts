@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { isAddress } from "viem";
 import { SESSION_COOKIE, sessionSecret, verifySessionToken } from "@/lib/auth/session";
 import { errorMessage } from "@/lib/monitoring";
+import { logoPath } from "@/lib/safe-url";
 import { currentRound } from "@/lib/rounds";
 import { TournamentError } from "@/lib/tournament/rules";
 import { defaultDeps, ledger, powerFor } from "@/lib/tournament/service";
@@ -65,6 +66,7 @@ export async function GET(req: Request) {
           name: a.name ?? a.symbol ?? `Agent #${a.agentId}`,
           ticker: a.symbol,
           token: a.token,
+          logoUrl: logoPath(a.token, a.logo),
           pitchId: pitch ? pitch.id : null,
           pitchHidden: pitch ? hidden.has(pitch.id) : false,
         };

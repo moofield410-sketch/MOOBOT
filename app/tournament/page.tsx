@@ -26,6 +26,7 @@ export default async function TournamentPage() {
   const [masters, state] = await Promise.all([getMasters(), getTournamentState()]);
   const all = masters.data ?? [];
   const name = new Map(all.map((m) => [m.tokenAddress, m.name]));
+  const byToken = new Map(all.map((m) => [m.tokenAddress, m]));
   const t = state.data;
   const live = t?.round.status === "live";
   const pitches = t?.pitches ?? [];
@@ -65,7 +66,12 @@ export default async function TournamentPage() {
             <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {tenders.map((x) => (
                 <li key={x.id}>
-                  <TenderCard t={x} masterName={x.masterName ?? name.get(x.masterToken) ?? null} />
+                  <TenderCard
+                    t={x}
+                    masterName={x.masterName ?? name.get(x.masterToken) ?? null}
+                    masterLogo={byToken.get(x.masterToken)?.logoUrl ?? null}
+                    masterTicker={byToken.get(x.masterToken)?.ticker ?? ""}
+                  />
                 </li>
               ))}
             </ul>

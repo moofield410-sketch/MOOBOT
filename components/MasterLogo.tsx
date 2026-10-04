@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
  * and no broken-image icon ever appears. `src` must already be checked by safeLogoUrl.
  * If a Content-Security-Policy is ever added, its img-src must allow https:.
  */
-export function MasterLogo({ src, size }: { src: string; size: number }) {
+export function MasterLogo({ src, size, eager = false }: { src: string; size: number; eager?: boolean }) {
   const ref = useRef<HTMLImageElement>(null);
   const [state, setState] = useState<"loading" | "loaded" | "failed">("loading");
 
@@ -28,7 +28,7 @@ export function MasterLogo({ src, size }: { src: string; size: number }) {
       alt=""
       width={size}
       height={size}
-      loading="lazy"
+      loading={eager ? "eager" : "lazy"}
       decoding="async"
       referrerPolicy="no-referrer"
       onLoad={() => setState("loaded")}

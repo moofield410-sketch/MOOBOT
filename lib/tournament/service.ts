@@ -8,6 +8,7 @@ import { getMasters } from "@/lib/registry";
 import { roundPool, type RoundMaster } from "@/lib/rewards";
 import { currentRound, type RoundState } from "@/lib/rounds";
 import type { Timeline } from "@/lib/schedule";
+import { logoPath } from "@/lib/safe-url";
 import { publicClientOrNull } from "@/lib/sources/chain";
 import { fetchOrbioAgentsByWallet, type OrbioAgent } from "@/lib/sources/orbio-api";
 import { serverTimeline, testClockActive } from "@/lib/timeline.server";
@@ -191,6 +192,7 @@ export async function submitPitch(deps: TournamentDeps, message: unknown, signat
     fighterToken: agent.token,
     fighterOwner: agent.owner,
     fighterAgentWallet: agent.agentWallet,
+    logoUrl: logoPath(agent.token, agent.logo),
     submittedBy: action.address,
     title,
     summary,

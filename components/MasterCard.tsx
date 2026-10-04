@@ -7,8 +7,8 @@ import type { Master } from "@/lib/types";
 
 const shortDate = (iso: string | null) => (iso ? formatDate(iso).replace(/ \d{4}$/, "") : "n/a");
 
-/** Token icon inside the gold-ring frame, over the initials (shown while loading, or if there's no logo or it fails). */
-export function MasterAvatar({ m, size = "md" }: { m: Pick<Master, "name" | "ticker" | "logoUrl">; size?: "md" | "lg" }) {
+/** A token's icon over its initials (the initials show while it loads, or if it can't). Masters and Fighters alike. */
+export function MasterAvatar({ m, size = "md", eager = false }: { m: Pick<Master, "name" | "ticker" | "logoUrl">; size?: "sm" | "md" | "lg"; eager?: boolean }) {
   const initials = m.name
     .split(/\s+/)
     .slice(0, 2)
@@ -19,23 +19,24 @@ export function MasterAvatar({ m, size = "md" }: { m: Pick<Master, "name" | "tic
     <span
       aria-hidden
       className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-grass/30 bg-[radial-gradient(circle_at_35%_30%,rgb(255_229_138/0.6),rgb(239_233_210)_70%)] font-display font-semibold text-moss shadow-[0_0_24px_-6px_rgb(255_179_0/0.45)] ${
-        size === "lg" ? "h-16 w-16 text-xl" : "h-11 w-11 text-sm"
+        size === "lg" ? "h-16 w-16 text-xl" : size === "sm" ? "h-8 w-8 text-[11px]" : "h-11 w-11 text-sm"
       }`}
     >
       {initials}
-      {m.logoUrl && <MasterLogo src={m.logoUrl} size={size === "lg" ? 64 : 44} />}
+      {m.logoUrl && <MasterLogo src={m.logoUrl} size={size === "lg" ? 64 : size === "sm" ? 32 : 44} eager={eager} />}
     </span>
   );
 }
 
-export function MasterCard({ m }: { m: Master }) {
+/** `eager` loads the icon at once, for cards that start off-screen inside a moving row. */
+export function MasterCard({ m, eager = false }: { m: Master; eager?: boolean }) {
   const usd = m.isMock ? m.liquidityUsd : m.marketCapUsd;
   // The info button sits above the card's stretched profile link (relative z-10).
   const na = <NotAvailable reason={NA_REASONS.orbioMissing} className="relative z-10" />;
   return (
     <article className="card card-hover group relative flex h-full flex-col p-5">
       <div className="flex items-start gap-3">
-        <MasterAvatar m={m} />
+        <MasterAvatar m={m} eager={eager} />
         <div className="min-w-0 flex-1">
           {/* Stretched link: the whole card opens the profile; the external links below sit above it. */}
           <Link

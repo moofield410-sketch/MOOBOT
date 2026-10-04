@@ -38,13 +38,19 @@ const ui = privateKeyToAccount(UI_KEY);
 const FIXTURE = JSON.parse(readFileSync("tests/fixtures/orbio-api.json", "utf8"));
 const ANALYTICS = JSON.parse(readFileSync("tests/fixtures/orbio-analytics.json", "utf8"));
 const base = FIXTURE.list.data[0];
+// Real logo addresses (Orbio's own image host, and one that only answers browsers), so the logo route is exercised.
+const LOGOS = {
+  501: "https://ungjdxribocbyrxvogqh.supabase.co/storage/v1/object/public/agent-images/8820be3bc0b3a58fb71dd7e47f53e4dddfcf2038233bb7c0bd861df09124d636/f95d8fc13b30abc898231a88af52fb4dd23957e19fc5c2e91fe5d9142c1def75.webp",
+  503: "https://gmgn.ai/external-res/1e084369013ef87c06ce46439f17602f_v2l.webp",
+  900: "https://pbs.twimg.com/profile_images/2106317976286928896/92-OPqD9_400x400.jpg",
+};
 const mkAgent = (id, owner, graduated, name) => ({
   ...base,
   agentId: String(id),
   token: `0x${String(id).padStart(40, "d")}`,
   name,
   symbol: name.replace(/\W/g, "").slice(0, 5).toUpperCase(),
-  logo: null,
+  logo: LOGOS[id] ?? null,
   owner,
   agentWallet: null,
   price: { ...base.price, graduated },

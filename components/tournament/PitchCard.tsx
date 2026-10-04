@@ -1,3 +1,4 @@
+import { MasterAvatar } from "@/components/MasterCard";
 import { HideButton } from "@/components/tournament/HideButton";
 import { ScoreControl } from "@/components/tournament/ScoreControl";
 import { VoteButton } from "@/components/tournament/VoteButton";
@@ -42,11 +43,14 @@ export function PitchCard({
   return (
     <article className="card card-hover flex h-full flex-col p-5" id={`pitch-${p.id}`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs text-soil/70">
-          {rank !== undefined && p.votingPower > 0 && <span className="mr-1.5 font-mono font-semibold text-grass">#{rank}</span>}
-          by <span className="font-semibold text-soil">{p.fighter}</span>
-          {p.ticker && <span className="text-soil/60"> ${p.ticker}</span>}
-        </p>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <MasterAvatar m={{ name: p.fighter, ticker: p.ticker ?? "", logoUrl: p.logoUrl ?? null }} size="sm" />
+          <p className="min-w-0 text-xs text-soil/70">
+            {rank !== undefined && p.votingPower > 0 && <span className="mr-1.5 font-mono font-semibold text-grass">#{rank}</span>}
+            by <span className="font-semibold text-soil">{p.fighter}</span>
+            {p.ticker && <span className="text-soil/60"> ${p.ticker}</span>}
+          </p>
+        </div>
         <span className={`chip ${p.status === "shortlisted" || p.status === "winner" ? "border-line-strong text-grass" : ""}`}>{STATUS[p.status]}</span>
       </div>
       <h3 className="mt-2 font-display text-base font-semibold text-soil">{p.title}</h3>

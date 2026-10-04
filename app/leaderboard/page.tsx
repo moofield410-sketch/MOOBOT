@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MasterAvatar } from "@/components/MasterCard";
 import { NoVotesYet } from "@/components/tournament/EmptyStates";
 import { Card, PageHeader } from "@/components/ui/Card";
 import { LockGate } from "@/components/ui/LockGate";
@@ -73,10 +74,15 @@ export default async function LeaderboardPage() {
                           <Rank n={p.rank} />
                         </td>
                         <td className={td}>
-                          <p className="font-semibold text-soil">{p.title}</p>
-                          <p className="text-xs text-soil/70">
-                            {p.fighter} · {p.masterToken ? `for ${name.get(p.masterToken) ?? "a Master"}` : "open pitch"}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <MasterAvatar m={{ name: p.fighter, ticker: p.ticker ?? "", logoUrl: p.logoUrl ?? null }} size="sm" />
+                            <div className="min-w-0">
+                              <p className="font-semibold text-soil">{p.title}</p>
+                              <p className="text-xs text-soil/70">
+                                {p.fighter} · {p.masterToken ? `for ${name.get(p.masterToken) ?? "a Master"}` : "open pitch"}
+                              </p>
+                            </div>
+                          </div>
                         </td>
                         <td className={`${td} text-right font-mono tabular-nums text-soil`}>{formatCompact(p.votes)}</td>
                         <td className={`${td} text-right font-mono font-semibold tabular-nums text-grass`}>{formatCompact(p.votingPower)}</td>

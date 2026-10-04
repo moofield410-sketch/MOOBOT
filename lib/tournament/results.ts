@@ -55,6 +55,7 @@ function toPitch(p: StoredPitch, doc: RoundDoc): Pitch {
     ticker: p.ticker,
     fighterToken: p.fighterToken,
     demoUrl: p.demoUrl,
+    logoUrl: p.logoUrl ?? null,
     scoreAvg: scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : null,
     scoreCount: scores.length,
   };
@@ -104,7 +105,7 @@ export function pastRoundOf(doc: RoundDoc, t: RoundTimes, poolCredits: number | 
     top: board
       .filter((p) => p.votingPower > 0)
       .slice(0, TOURNAMENT.shortlist)
-      .map((p) => ({ id: p.id, title: p.title, fighter: p.fighter, votes: p.votes, votingPower: p.votingPower })),
+      .map((p) => ({ id: p.id, title: p.title, fighter: p.fighter, ticker: p.ticker ?? "", logoUrl: p.logoUrl ?? null, votes: p.votes, votingPower: p.votingPower })),
   };
 }
 

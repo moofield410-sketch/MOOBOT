@@ -71,6 +71,8 @@ export interface Pitch {
   ticker?: string;
   fighterToken?: Address;
   demoUrl?: string | null;
+  /** The Fighter's token icon (a Moofield logo path), or null for initials. */
+  logoUrl?: string | null;
   /** Masters' scores (1 to TOURNAMENT.scoreMax): the average, and how many Masters scored. */
   scoreAvg?: number | null;
   scoreCount?: number;
@@ -105,7 +107,7 @@ export interface PastRound {
   poolCredits: number | null;
   pitchCount?: number;
   /** The top places, best first. */
-  top?: { id: string; title: string; fighter: string; votes: number; votingPower: number }[];
+  top?: { id: string; title: string; fighter: string; ticker?: string; logoUrl?: string | null; votes: number; votingPower: number }[];
 }
 
 export interface VoterRank {

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, it } from "node:test";
 import { cached, clearCache } from "@/lib/cache";
-import { safeLogoUrl } from "@/lib/safe-url";
+import { logoPath, safeLogoUrl } from "@/lib/safe-url";
 import { confirmGraduated, fetchAgentsByWallet, fetchAllAgents, fetchGraduatedMasters, parseAgent, toMaster, type Fetcher } from "@/lib/sources/orbio-api";
 
 /**
@@ -148,19 +148,23 @@ describe("Master logos", () => {
     assert.equal(toMaster(parseAgent({ ...A1, logo: "http://example.com/a.png" })!).logoUrl, null);
   });
 
-  it("carries logoUrl through the list path and the per-agent path", async () => {
+  it("carries the logo through the list path and the per-agent path, served from the site's logo route", async () => {
     const { fetcher } = fakeFetcher();
     const { masters } = await fetchGraduatedMasters(fetcher);
-    assert.equal(masters[0].logoUrl, LOGO);
-    assert.equal(toMaster(parseAgent(detail(A1, true))!).logoUrl, LOGO);
+    const path = logoPath(masters[0].tokenAddress, LOGO);
+    assert.match(path!, /^\/api\/agents\/0x[0-9a-f]{40}\/logo\?v=[0-9a-z]+$/);
+    assert.equal(masters[0].logoUrl, path);
+    assert.equal(toMaster(parseAgent(detail(A1, true))!).logoUrl, path);
     const owned = await fetchAgentsByWallet(tok(99) as `0x${string}`, fetcher);
-    assert.deepEqual(owned.map((a) => a.logoUrl), [LOGO, null]);
+    assert.deepEqual(owned.map((a) => a.logoUrl), [path, null]);
+    // A changed logo gets a new address, so caches never show the old one.
+    assert.notEqual(logoPath(masters[0].tokenAddress, `${LOGO}?new`), path);
   });
 
   it("reads the recorded fixture's logo for agent 1", () => {
     const fixture = JSON.parse(readFileSync("tests/fixtures/orbio-api.json", "utf8")) as { list: { data: unknown[] } };
     const [one, two] = fixture.list.data.map((raw) => toMaster(parseAgent(raw)!));
-    assert.equal(one.logoUrl, "https://example.com/orbio-test/rec1.png");
+    assert.equal(one.logoUrl, logoPath(one.tokenAddress, "https://example.com/orbio-test/rec1.png"));
     assert.equal(two.logoUrl, null);
   });
 });

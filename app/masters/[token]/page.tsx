@@ -117,7 +117,7 @@ export default async function MasterProfilePage({ params }: Props) {
               <ul className={`grid gap-5 ${tenders.length > 1 ? "md:grid-cols-2" : "max-w-md"}`}>
                 {tenders.map((t) => (
                   <li key={t.id}>
-                    <TenderCard t={t} masterName={m.name} />
+                    <TenderCard t={t} masterName={m.name} masterLogo={m.logoUrl} masterTicker={m.ticker} />
                   </li>
                 ))}
               </ul>

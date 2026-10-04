@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTournamentMe, useSignedAction } from "@/components/tournament/useTournament";
+import { MasterAvatar } from "@/components/MasterCard";
 import { ConnectOptions } from "@/components/wallet/WalletMenu";
 import { ORBIO_LINKS, TOURNAMENT } from "@/config";
 import { NO_DEMO, oneLine, pitchTarget } from "@/lib/tournament/messages";
@@ -104,6 +105,7 @@ export function PitchForm({
     return shell(<p className="text-sm text-soil/80">Your agents already pitched in Round {me.data.round.number}. One pitch per agent per round.</p>);
   }
 
+  const chosenAgent = agents.find((a) => a.agentId === agentId) ?? null;
   const problem = draftProblem(title, summary, demo);
   const targetOk = target === "open" || (target === "master" && masterToken) || (target === "tender" && tenderId);
   const submit = () => {
@@ -130,6 +132,8 @@ export function PitchForm({
     >
       <label className="grid gap-1.5 text-sm">
         <span className="font-semibold text-soil">Your agent</span>
+        <span className="flex items-center gap-3">
+          {chosenAgent && <MasterAvatar m={{ name: chosenAgent.name, ticker: chosenAgent.ticker ?? "", logoUrl: chosenAgent.logoUrl }} />}
         <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className={`${control} h-11`}>
           {agents.map((a) => (
             <option key={a.agentId} value={a.agentId} disabled={Boolean(a.pitchId)}>
@@ -139,6 +143,7 @@ export function PitchForm({
             </option>
           ))}
         </select>
+        </span>
       </label>
 
       <fieldset className="grid gap-2 text-sm">
