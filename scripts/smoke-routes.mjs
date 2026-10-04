@@ -56,7 +56,7 @@ const PAGES = [
   ["/leaderboard", 200, "Who&#x27;s leading this round"],
   ["/leaderboard", 200, "No votes yet"],
   ["/credits", 200, "Where the $CREDIT goes"],
-  ["/credits", 200, "Orbio doesn&#x27;t publish a per-agent history yet"],
+  ["/credits", 200, "The site keeps its own day-by-day record"],
   // n/a figures carry their reason (server-rendered into the tooltip).
   ["/credits", 200, "Appears once the official $MOOBOT contract is confirmed on Orbio."],
   ["/", 200, "Appears once the official $MOOBOT contract is confirmed on Orbio."],
@@ -76,6 +76,12 @@ const PAGES = [
   ["/terms", 200, "Terms of use"],
   ["/privacy", 200, "Privacy"],
   ["/wallet", 200, "Your wallet"],
+  ["/", 200, "Official updates"],
+  ["/", 200, "@M00FIELD"],
+  ["/tournament/recaps", 200, "No recaps yet"],
+  ["/tournament/recaps/1", 404, "Page not found"],
+  ["/play/2026-10-04/1240", 200, "1,240"],
+  ["/play/2999-01-01/10", 404, "Page not found"],
   ["/docs/not-a-page", 404, "Page not found"],
   // Not graduated, or the list and the per-agent curve disagree: never a Master.
   ["/masters/" + NOT_GRADUATED.token, 404, "Page not found"],
@@ -147,12 +153,15 @@ const visibleText = (html) =>
 /** A $MOOBOT amount, e.g. "12,000 $MOOBOT". None may appear while $MOOBOT is not launched. */
 const MOOBOT_NUMBER = /\d[\d,.]*\s*(?:&nbsp;)?\$MOOBOT/;
 
-/** Checks on the footer's Community list: X, Telegram and Discord stay "Coming soon" until the accounts exist. */
+/** Checks on the footer's Community list: X links only the confirmed account; Telegram and Discord stay "Coming soon". */
+const CONFIRMED_X = "https://x.com/M00FIELD";
 function communityProblems(html) {
   const problems = [];
   const block = html.slice(html.indexOf(">Community<"), html.indexOf("</footer>"));
   const item = (label) => block.slice(block.indexOf(label) - 400, block.indexOf(label) + 120);
-  if (block.includes("x.com/")) problems.push("footer links an X account that isn't confirmed");
+  const xLinks = block.match(/https:\/\/(?:x|twitter)\.com\/[^"]*/g) ?? [];
+  if (xLinks.some((u) => u !== CONFIRMED_X)) problems.push("footer links an X account that isn't confirmed");
+  if (!xLinks.includes(CONFIRMED_X)) problems.push("footer is missing the official X account");
   for (const label of ["Telegram", "Discord"]) if (!item(label).includes("Coming soon")) problems.push(`${label} should stay Coming soon`);
   return problems;
 }
@@ -227,6 +236,12 @@ await runSite("MOOBOT_TOKEN_ADDRESS empty", 3199, {}, async ({ base, page, expec
   for (const m of agents.data) await page(`/masters/${m.tokenAddress}`, 200, [m.name, "Orbio doesn&#x27;t publish this yet."], noMooBotNumbers);
 
   await expectJson("/api/moobot", (b) => (b.status === "not-launched" && Object.keys(b).length === 1 ? null : "expected exactly {status: not-launched}"));
+  // The Bloom Pop score card (the preview image for shared scores) is a real PNG.
+  const card = await fetch(`${base}/play/2026-10-04/1240/opengraph-image`);
+  if (card.status !== 200 || !card.headers.get("content-type")?.startsWith("image/png")) {
+    failures.push(`MOOBOT_TOKEN_ADDRESS empty: score card image returned ${card.status} ${card.headers.get("content-type")}`);
+    console.log("✖ /play/…/opengraph-image");
+  } else console.log("✔ /play/…/opengraph-image");
   await expectJson(`/api/wallet/${GRADUATED.owner}`, (b) =>
     b.data.moobot.status === "not-launched" && b.data.moobot.raw === null && b.data.moobot.formatted === null && b.data.aura === null
       ? null

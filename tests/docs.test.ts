@@ -123,9 +123,9 @@ describe("docs", () => {
     }
   });
 
-  it("keeps unconfirmed socials empty until the accounts exist", () => {
-    assert.equal(SOCIAL.x, null);
-    assert.equal(SOCIAL.xHandle, "@moofield");
+  it("links only the confirmed X account and keeps the other socials empty", () => {
+    assert.equal(SOCIAL.x, "https://x.com/M00FIELD");
+    assert.equal(SOCIAL.xHandle, "@M00FIELD");
     assert.equal(SOCIAL.telegram, null);
     assert.equal(SOCIAL.discord, null);
     assert.equal(DISCLAIMER, "Independent community project, not affiliated with Orbio. Not financial advice.");

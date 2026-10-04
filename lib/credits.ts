@@ -1,5 +1,6 @@
 import { CACHE, REWARDS, USE_MOCK_DATA } from "@/config";
 import { cached } from "@/lib/cache";
+import { recordFieldFundTotal } from "@/lib/field-fund-history";
 import { getMooBot } from "@/lib/moobot";
 import { credits, roundPool, splitReceived } from "@/lib/rewards";
 import { SAMPLE_TOTAL_CREDITS } from "@/lib/sample/credits";
@@ -16,7 +17,20 @@ async function receivedAtoms(): Promise<{ value: bigint; waiting: string | null;
   const moobot = await getMooBot();
   if (moobot.status !== "verified") return null;
   const claimed = moobot.agent.creditClaimedAtoms;
-  return claimed ? { value: BigInt(claimed), waiting: moobot.agent.creditOwedAtoms, source: "orbio" } : null;
+  if (!claimed) return null;
+  // Each fresh read also feeds the automatic daily history (lib/field-fund-history.ts).
+  await recordFieldFundTotal(BigInt(claimed));
+  return { value: BigInt(claimed), waiting: moobot.agent.creditOwedAtoms, source: "orbio" };
+}
+
+/** For the scheduled refresh: records today's total even when nobody visits. Never throws. */
+export async function recordFieldFund(): Promise<"recorded" | "not-launched"> {
+  if (USE_MOCK_DATA) return "not-launched";
+  const moobot = await getMooBot();
+  const claimed = moobot.status === "verified" ? moobot.agent.creditClaimedAtoms : null;
+  if (!claimed) return "not-launched";
+  await recordFieldFundTotal(BigInt(claimed));
+  return "recorded";
 }
 
 export async function getCredits(): Promise<DataEnvelope<CreditStats>> {

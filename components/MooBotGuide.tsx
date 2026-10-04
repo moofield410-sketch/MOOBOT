@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 import { MooBotMascot, type MascotState } from "@/components/MooBotMascot";
+import { AURA_RING } from "@/components/moobot/aura";
 import { useSchedule } from "@/components/ScheduleProvider";
 import { FULL_UNLOCK_AFTER_H } from "@/config";
 import { useWalletBalances } from "@/components/wallet/useWalletBalances";
@@ -36,13 +37,6 @@ function Mascot({ gesture, awake, synced, size }: { gesture: Gesture; awake: boo
   const state: MascotState = !synced ? "thinking" : !awake ? "sleeping" : gesture === "wave" ? "happy" : gesture === "flex" ? "talking" : "idle";
   return <MooBotMascot state={state} size={size} decorative />;
 }
-/** Holder aura glow per tier (names from HOLDER_AURA_TIERS). Cosmetic only. */
-const AURA_RING: Record<string, string> = {
-  Spark: "ring-1 ring-grass/50",
-  Glow: "ring-2 ring-grass/70 shadow-[0_0_14px_rgba(93,170,74,0.4)]",
-  Blaze: "ring-2 ring-sun shadow-[0_0_18px_rgba(242,183,5,0.5)]",
-  Radiant: "ring-4 ring-sun shadow-[0_0_26px_rgba(242,183,5,0.7)]",
-};
 
 /** The connected wallet's holder aura, or null (no wallet, $MOOBOT not launched, or below the first tier). */
 function useHolderAura(): string | null {

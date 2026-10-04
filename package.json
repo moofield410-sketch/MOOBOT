@@ -14,6 +14,7 @@
     "inspect:csv": "node scripts/inspect-csv.mjs"
   },
   "dependencies": {
+    "@netlify/blobs": "^11.1.3",
     "@tanstack/react-query": "^5.104.1",
     "@wagmi/connectors": "^8.2.0",
     "@wagmi/core": "^3.6.5",

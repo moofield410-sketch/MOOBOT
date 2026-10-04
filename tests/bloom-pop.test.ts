@@ -51,3 +51,24 @@ describe("bloom pop grid", () => {
     assert.deepEqual(snapCell(g, target.x + 2, target.y + 3, 16, 0), [1, 5]);
   });
 });
+
+describe("bloom pop daily field", () => {
+  it("gives everyone the same board for a day, and a different one the next day", async () => {
+    const { createGrid, seededRng } = await import("@/lib/bloom-pop");
+    const a = createGrid(6, 4, seededRng("2026-10-04"));
+    const b = createGrid(6, 4, seededRng("2026-10-04"));
+    const c = createGrid(6, 4, seededRng("2026-10-05"));
+    assert.deepEqual(a, b);
+    assert.notDeepEqual(a, c);
+  });
+
+  it("accepts only real, non-future share links", async () => {
+    const { parseShare } = await import("@/lib/bloom-pop");
+    const now = Date.parse("2026-10-04T15:00:00Z");
+    assert.deepEqual(parseShare("2026-10-04", "1240", now), { day: "2026-10-04", score: 1240 });
+    assert.equal(parseShare("2026-10-05", "10", now), null);
+    assert.equal(parseShare("2026-02-30", "10", now), null);
+    assert.equal(parseShare("2026-10-04", "-5", now), null);
+    assert.equal(parseShare("2026-10-04", "12345678", now), null);
+  });
+});

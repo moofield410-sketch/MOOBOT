@@ -95,7 +95,8 @@ describe("API routes with real data", { skip: USE_MOCK_DATA ? "USE_MOCK_DATA is 
     const res = await cronScan(new Request("http://x/api/cron/scan"));
     assert.equal(res.status, 200);
     const body = await res.json();
-    assert.deepEqual(body, { ok: true, source: "orbio", masters: 1 });
+    // No $MOOBOT address in this test, so there is no Field Fund total to record yet.
+    assert.deepEqual(body, { ok: true, source: "orbio", masters: 1, fieldFund: "not-launched" });
     assert.ok(orbioCalls.some((u) => u.endsWith("/agents/1")), "confirmed per agent");
 
     // The refreshed list is served from the cache without calling Orbio again.

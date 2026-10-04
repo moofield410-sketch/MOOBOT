@@ -1,5 +1,6 @@
 import { USE_MOCK_DATA } from "@/config";
 import { invalidate } from "@/lib/cache";
+import { recordFieldFund } from "@/lib/credits";
 import { scanIfDue } from "@/lib/indexer/graduations";
 import { errorMessage } from "@/lib/monitoring";
 import { refreshMasters } from "@/lib/registry";
@@ -12,7 +13,8 @@ export const dynamic = "force-dynamic";
  * netlify/functions/refresh-orbio.mjs calls it every 3 minutes (schedule in netlify.toml). Without
  * it the list still refreshes on demand, when a visitor loads it and the cached copy is older than
  * CACHE.mastersTtlMs. In production it requires Authorization: Bearer <CRON_SECRET>.
- * Real mode: refreshes graduated agents from the Orbio API. Preview mode: runs the mock scanner.
+ * Real mode: refreshes graduated agents from the Orbio API and records today's Field Fund total
+ * (the automatic daily history). Preview mode: runs the mock scanner.
  */
 export async function GET(req: Request) {
   if (process.env.NODE_ENV === "production") {
@@ -24,8 +26,8 @@ export async function GET(req: Request) {
 
   try {
     if (!USE_MOCK_DATA) {
-      const masters = await refreshMasters();
-      return Response.json({ ok: true, source: "orbio", masters });
+      const [masters, fieldFund] = await Promise.all([refreshMasters(), recordFieldFund()]);
+      return Response.json({ ok: true, source: "orbio", masters, fieldFund });
     }
     const result = await scanIfDue(mockReader, true);
     if (result && result.added > 0) invalidate("masters");

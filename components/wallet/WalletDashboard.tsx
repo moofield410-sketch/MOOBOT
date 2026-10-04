@@ -9,6 +9,7 @@ import { Card, EmptyState, StaleNotice } from "@/components/ui/Card";
 import { LockGate } from "@/components/ui/LockGate";
 import { NotAvailable } from "@/components/ui/NotAvailable";
 import { MOOBOT_NOT_LAUNCHED, NA_REASONS } from "@/lib/na-reasons";
+import { HolderAuraPreview } from "@/components/wallet/HolderAuraPreview";
 import { useWalletBalances } from "@/components/wallet/useWalletBalances";
 import { StatRow, StatTile } from "@/components/ui/Stats";
 import { CopyButton } from "@/components/ui/CopyButton";
@@ -126,6 +127,8 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
         />
       </section>
       {balances.isError && <p className="text-sm text-moss">We couldn&apos;t load your balances. Please try again shortly.</p>}
+
+      <HolderAuraPreview moobot={b?.moobot} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Voting eligibility" meta={balances.data ? { updatedAt: balances.data.updatedAt, stale: balances.data.stale } : undefined}>

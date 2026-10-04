@@ -3,6 +3,7 @@ import { Fredoka, JetBrains_Mono, Nunito } from "next/font/google";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { MooBotGuide } from "@/components/MooBotGuide";
+import { LaunchAnnouncement } from "@/components/moobot/LaunchAnnouncement";
 import { PointerEffects } from "@/components/motion/PointerEffects";
 import { PREVIEW_BANNER_SCRIPT, PreviewBanner } from "@/components/PreviewBanner";
 import { Providers } from "@/components/Providers";
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ScheduleProvider>
             {USE_MOCK_DATA && <PreviewBanner />}
             <Header />
+            <LaunchAnnouncement />
             <main id="main" className="safe-x mx-auto w-full max-w-7xl flex-1 pt-10 sm:pt-14 sm:[--safe-pad:1.5rem]">
               {children}
             </main>

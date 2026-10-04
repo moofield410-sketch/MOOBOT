@@ -21,7 +21,7 @@ const S = REWARDS.roundSplit;
 
 export default async function CreditsPage() {
   const [credits, treasury, moobot] = await Promise.all([getCredits(), getTreasury(), getMooBot()]);
-  const market = getCreditMarket();
+  const market = await getCreditMarket();
   const t = treasury.data;
   const pool = t?.poolAtoms ? BigInt(t.poolAtoms) : null;
   const buckets = pool !== null ? splitByPercent(pool, S, "treasuryPct") : null;
@@ -128,11 +128,16 @@ export default async function CreditsPage() {
         {market.data ? (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-                <StatTile label="Received, last 24h" value={formatCompact(market.data.received24h)} hint="$CREDIT" />
+                <StatTile label={market.source === "mock" ? "Received, last 24h" : "Received, latest day"} value={formatCompact(market.data.received24h)} hint="$CREDIT" />
                 <StatTile label="Received per day" value={formatCompact(averagePerDay(market.data.history))} hint="7-day average" />
-                <StatTile label="Movements shown" value={formatInt(market.data.movements.length)} />
+                {market.data.movements.length > 0 ? (
+                  <StatTile label="Movements shown" value={formatInt(market.data.movements.length)} />
+                ) : (
+                  <StatTile label="Days recorded" value={formatInt(market.data.history.length)} hint="Recorded automatically from Orbio" />
+                )}
               </div>
 
+              {market.data.movements.length > 0 && (
               <Card title="Recent movements">
                 <div className="-mx-3 overflow-x-auto">
                   <table className="w-full min-w-[28rem] text-sm">
@@ -158,11 +163,12 @@ export default async function CreditsPage() {
                   </table>
                 </div>
               </Card>
+              )}
             </div>
         ) : (
-          <ComingSoon title="Planned">
-            A day-by-day history of the $CREDIT the MooBot agent receives. Orbio doesn&apos;t publish a per-agent history yet, so this
-            needs its own record-keeping first.
+          <ComingSoon title="Recording">
+            The site keeps its own day-by-day record of the $CREDIT the MooBot agent receives, starting when the official contract is
+            confirmed. The first full day shows here after the second day of records.
           </ComingSoon>
         )}
       </section>

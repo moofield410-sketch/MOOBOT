@@ -113,3 +113,16 @@ describe("round countdown", () => {
     assert.equal(roundLengthMs(fast), 72_000);
   });
 });
+
+describe("master of the day", () => {
+  it("picks the same Master all day whatever the order, and rotates by day", async () => {
+    const { masterOfTheDay } = await import("@/lib/spotlight");
+    const ms = Array.from({ length: 9 }, (_, i) => ({ tokenAddress: `0x${String(i).padStart(40, "0")}` }) as unknown as import("@/lib/types").Master);
+    const morning = Date.parse("2026-10-04T01:00:00Z");
+    const evening = Date.parse("2026-10-04T23:00:00Z");
+    assert.equal(masterOfTheDay(ms, morning), masterOfTheDay([...ms].reverse(), evening));
+    const picks = new Set(Array.from({ length: 14 }, (_, d) => masterOfTheDay(ms, morning + d * 86_400_000)?.tokenAddress));
+    assert.ok(picks.size > 1);
+    assert.equal(masterOfTheDay([], morning), null);
+  });
+});

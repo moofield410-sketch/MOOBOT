@@ -161,3 +161,35 @@ export const SEEDS = [
   { name: "Clover", fill: "#8a5bb8", ink: "#fffdf7" },
   { name: "Berry", fill: "#e0654f", ink: "#fffdf7" },
 ] as const;
+
+/**
+ * A repeatable random sequence from a text seed (FNV-1a hash into mulberry32). The daily field
+ * uses the UTC date as the seed, so every visitor gets the same board and the same seeds that day.
+ */
+export function seededRng(seed: string): Rng {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  let a = h >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** The daily field's id: the UTC date, YYYY-MM-DD. */
+export const dailyFieldId = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/** Share links carry a self-reported score; anything outside this range is rejected. */
+export const MAX_SHARE_SCORE = 9_999_999;
+
+/** Checks a shared /play/<day>/<score> link: a real past-or-present UTC day and a whole score. */
+export function parseShare(day: string, score: string, now = Date.now()): { day: string; score: number } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !/^\d{1,7}$/.test(score)) return null;
+  const t = Date.parse(`${day}T00:00:00Z`);
+  if (Number.isNaN(t) || dailyFieldId(t) !== day || t > now) return null;
+  const n = Number(score);
+  return n <= MAX_SHARE_SCORE ? { day, score: n } : null;
+}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MooBotMascot, type MascotState } from "@/components/MooBotMascot";
+import { SOCIAL } from "@/config";
 import * as G from "@/lib/bloom-pop";
 
 /**
@@ -26,6 +27,7 @@ const BEST_KEY = "moofield:bloom-pop:best";
 
 
 type Status = "ready" | "playing" | "over" | "cleared";
+type Mode = "daily" | "free";
 type Flying = { x: number; y: number; vx: number; vy: number; kind: number };
 type Particle = { x: number; y: number; vx: number; vy: number; kind: number; t: number; mode: "bloom" | "fall" };
 type Floater = { x: number; y: number; text: string; t: number };
@@ -42,6 +44,8 @@ type Game = {
   particles: Particle[];
   floaters: Floater[];
   crowFlap: number;
+  /** Seeded for the daily field (same board for everyone that day), Math.random for free play. */
+  rng: G.Rng;
 };
 
 function rowsFor(level: number) {
@@ -51,15 +55,15 @@ function kindsFor(level: number) {
   return level === 1 ? 4 : G.SEED_KINDS;
 }
 
-function pickKind(game: Pick<Game, "grid" | "level">) {
+function pickKind(game: Pick<Game, "grid" | "level" | "rng">) {
   const kinds = G.kindsInGrid(game.grid);
-  if (kinds.length === 0) return Math.floor(Math.random() * kindsFor(game.level));
-  return kinds[Math.floor(Math.random() * kinds.length)];
+  if (kinds.length === 0) return Math.floor(game.rng() * kindsFor(game.level));
+  return kinds[Math.floor(game.rng() * kinds.length)];
 }
 
-function newGame(level: number, score: number): Game {
-  const grid = G.createGrid(rowsFor(level), kindsFor(level));
-  const base = { grid, level };
+function newGame(level: number, score: number, rng: G.Rng = Math.random): Game {
+  const grid = G.createGrid(rowsFor(level), kindsFor(level), rng);
+  const base = { grid, level, rng };
   return {
     ...base,
     score,
@@ -360,25 +364,33 @@ export function BloomPop() {
   const [best, setBest] = useState(0);
   const [level, setLevel] = useState(1);
   const [mood, setMood] = useState<MascotState>("idle");
+  const [mode, setMode] = useState<Mode>("daily");
+  /** The daily field being played (fixed when the run starts, so midnight doesn't change it). */
+  const [day, setDay] = useState<string | null>(null);
 
   const setStatus = useCallback((s: Status) => {
     statusRef.current = s;
     setStatusState(s);
   }, []);
 
+  const bestKey = mode === "daily" && day ? `${BEST_KEY}:daily:${day}` : BEST_KEY;
+
   useEffect(() => {
-    const saved = Number(localStorage.getItem(BEST_KEY));
-    if (saved > 0) setBest(saved);
-  }, []);
+    try {
+      setBest(Number(localStorage.getItem(bestKey)) || 0);
+    } catch {
+      setBest(0);
+    }
+  }, [bestKey]);
 
   useEffect(() => {
     if (score > best) {
       setBest(score);
       try {
-        localStorage.setItem(BEST_KEY, String(score));
+        localStorage.setItem(bestKey, String(score));
       } catch {}
     }
-  }, [score, best]);
+  }, [score, best, bestKey]);
 
   const cheer = useCallback(() => {
     setMood("happy");
@@ -416,7 +428,7 @@ export function BloomPop() {
       } else if (++game.misses >= G.MISSES_PER_ROW) {
         game.misses = 0;
         game.crowFlap = 0.9;
-        G.pushRow(grid, kindsFor(game.level));
+        G.pushRow(grid, kindsFor(game.level), game.rng);
       }
 
       if (G.isEmpty(grid)) {
@@ -456,10 +468,19 @@ export function BloomPop() {
     [game.current, game.next] = [game.next, game.current];
   }, []);
 
+  /** A fresh run (level 1) in `runMode`, or the next field of the current run (keeps score and seeds). */
   const start = useCallback(
-    (nextLevel: number) => {
+    (nextLevel: number, runMode?: Mode) => {
       const keep = nextLevel > 1 ? gameRef.current.score : 0;
-      gameRef.current = newGame(nextLevel, keep);
+      let rng = gameRef.current.rng;
+      if (nextLevel === 1) {
+        const m = runMode ?? "daily";
+        const today = G.dailyFieldId(Date.now());
+        setMode(m);
+        setDay(m === "daily" ? today : null);
+        rng = m === "daily" ? G.seededRng(`bloom-pop:${today}`) : Math.random;
+      }
+      gameRef.current = newGame(nextLevel, keep, rng);
       setLevel(nextLevel);
       setScore(keep);
       setMood("idle");
@@ -572,7 +593,7 @@ export function BloomPop() {
           Field <span className="ml-1 font-mono text-base font-semibold tabular-nums text-soil">{level}</span>
         </span>
         <span>
-          Best <span className="ml-1 font-mono text-base font-semibold tabular-nums text-soil">{best}</span>
+          {mode === "daily" ? "Today's best" : "Best"} <span className="ml-1 font-mono text-base font-semibold tabular-nums text-soil">{best}</span>
         </span>
       </div>
 
@@ -616,10 +637,17 @@ export function BloomPop() {
               {status === "ready" && (
                 <>
                   <p className="font-display text-2xl font-semibold text-soil">Bloom Pop</p>
-                  <p className="mx-auto mt-2 max-w-[16rem] text-sm text-fern">Match three seeds of a kind to make them bloom.</p>
-                  <button type="button" className="btn-primary mt-5 px-6 py-3" onClick={() => start(1)}>
-                    Play
-                  </button>
+                  <p className="mx-auto mt-2 max-w-[16rem] text-sm text-fern">
+                    Match three seeds of a kind to make them bloom. Today&apos;s field is the same for everyone.
+                  </p>
+                  <div className="mt-5 flex flex-col items-center gap-3">
+                    <button type="button" className="btn-primary px-6 py-3" onClick={() => start(1, "daily")}>
+                      Play today&apos;s field
+                    </button>
+                    <button type="button" className="tap link text-sm" onClick={() => start(1, "free")}>
+                      Free play
+                    </button>
+                  </div>
                 </>
               )}
               {status === "over" && (
@@ -627,22 +655,30 @@ export function BloomPop() {
                   <p className="font-display text-2xl font-semibold text-soil">The meadow is full</p>
                   <p className="mt-2 text-sm text-fern">
                     You scored <span className="font-mono font-semibold text-soil">{score}</span>
+                    {mode === "daily" ? " on today's field" : ""}
                     {score > 0 && score >= best ? ", a new best." : "."}
                   </p>
-                  <button type="button" className="btn-primary mt-5 px-6 py-3" onClick={() => start(1)}>
-                    Plant again
-                  </button>
+                  <div className="mt-5 flex flex-col items-center gap-3">
+                    {mode === "daily" && day && score > 0 && <ShareScore day={day} score={score} />}
+                    <button type="button" className={`${mode === "daily" && score > 0 ? "btn-secondary" : "btn-primary"} px-6 py-3`} onClick={() => start(1, mode)}>
+                      {mode === "daily" ? "Try today's field again" : "Plant again"}
+                    </button>
+                    <button type="button" className="tap link text-sm" onClick={() => start(1, mode === "daily" ? "free" : "daily")}>
+                      {mode === "daily" ? "Free play" : "Play today's field"}
+                    </button>
+                  </div>
                 </>
               )}
               {status === "cleared" && (
                 <>
                   <p className="font-display text-2xl font-semibold text-soil">Field {level} in bloom!</p>
-                  <p className="mt-2 text-sm text-fern">
-                    +{250 * level} bonus. Crowley looks annoyed.
-                  </p>
-                  <button type="button" className="btn-primary mt-5 px-6 py-3" onClick={() => start(level + 1)}>
-                    Next field
-                  </button>
+                  <p className="mt-2 text-sm text-fern">+{250 * level} bonus. Crowley looks annoyed.</p>
+                  <div className="mt-5 flex flex-col items-center gap-3">
+                    <button type="button" className="btn-primary px-6 py-3" onClick={() => start(level + 1)}>
+                      Next field
+                    </button>
+                    {mode === "daily" && day && <ShareScore day={day} score={score} quiet />}
+                  </div>
                 </>
               )}
             </div>
@@ -651,6 +687,33 @@ export function BloomPop() {
       </div>
       <p className="mt-3 px-1 text-xs text-fern">Aim with your mouse or finger, release to launch. Tap the small seed to swap. Keyboard: ← → to aim, Space to launch, S to swap.</p>
     </div>
+  );
+}
+
+/**
+ * Shares a daily score on X with X's free share link (no API). The link opens /play/<day>/<score>,
+ * whose preview image is the score card (app/play/[day]/[score]/opengraph-image.tsx).
+ */
+function ShareScore({ day, score, quiet = false }: { day: string; score: number; quiet?: boolean }) {
+  const handle = SOCIAL.xHandle.replace(/^@/, "");
+  const href = () => {
+    const url = `${window.location.origin}/play/${day}/${score}`;
+    const text = `I scored ${score.toLocaleString("en-US")} on today's Bloom Pop field at Moofield 🌼 Can you beat it?`;
+    return `https://x.com/intent/post?${new URLSearchParams({ text, url, via: handle })}`;
+  };
+  return (
+    <button
+      type="button"
+      className={quiet ? "tap link text-sm" : "btn-primary px-6 py-3"}
+      onClick={() => window.open(href(), "_blank", "noopener,noreferrer")}
+    >
+      {!quiet && (
+        <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4" fill="currentColor">
+          <path d="M17.7 3h3.1l-6.8 7.8L22 21h-6.3l-4.9-6.4L5.2 21H2.1l7.3-8.3L1.8 3h6.4l4.4 5.9L17.7 3Zm-1.1 16.2h1.7L7.5 4.7H5.6l11 14.5Z" />
+        </svg>
+      )}
+      Share your score
+    </button>
   );
 }
 

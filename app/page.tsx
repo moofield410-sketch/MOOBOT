@@ -4,6 +4,7 @@ import { Faq, type FaqItem } from "@/components/Faq";
 import { LaunchTimeline, NextUnlockLabel, NextUnlockValue } from "@/components/LaunchTimeline";
 import { BloomPop, Crowley } from "@/components/home/BloomPop";
 import { HomeHero } from "@/components/home/HomeHero";
+import { MasterSpotlight } from "@/components/home/MasterSpotlight";
 import { MastersMarquee } from "@/components/home/MastersMarquee";
 import { MooBotMascot } from "@/components/MooBotMascot";
 import { CountUp } from "@/components/motion/CountUp";
@@ -28,6 +29,7 @@ import { CREDIT } from "@/lib/rewards";
 import { formatCompact, formatUtcDateTime } from "@/lib/format";
 import { getMooBot } from "@/lib/moobot";
 import { getMasters } from "@/lib/registry";
+import { masterOfTheDay } from "@/lib/spotlight";
 import { getLeaderboard, getPitches } from "@/lib/tournament";
 
 export const dynamic = "force-dynamic";
@@ -71,11 +73,12 @@ export default async function HomePage() {
   const [masters, credits, moobot] = await Promise.all([getMasters(), getCredits(), getMooBot()]);
   const pitches = getPitches();
   const leaderboard = getLeaderboard();
-  const market = getCreditMarket();
+  const market = await getCreditMarket();
 
   const all = masters.data ?? [];
   const featured = [...all].sort((a, b) => Number(b.openToPitches) - Number(a.openToPitches)).slice(0, 12);
   const masterName = new Map(all.map((m) => [m.tokenAddress, m.name]));
+  const spotlight = masterOfTheDay(all);
   const openPitches = pitches.data?.filter((p) => p.status === "open" || p.status === "shortlisted") ?? [];
   const totalVotes = (pitches.data ?? []).reduce((s, p) => s + p.votes, 0);
   const topPitches = leaderboard.data?.pitches.slice(0, 5) ?? [];
@@ -192,6 +195,7 @@ export default async function HomePage() {
             </Link>
           }
         />
+        {spotlight && <MasterSpotlight m={spotlight} />}
         {featured.length > 0 ? (
           <MastersMarquee masters={featured} />
         ) : (

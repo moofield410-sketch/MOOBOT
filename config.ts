@@ -23,36 +23,13 @@ export const SITE = {
  * the footer shows "Coming soon" instead of linking to a guessed account.
  */
 export const SOCIAL = {
-  /** CONFIRM: the Moofield X account. */
-  x: null as string | null,
-  xHandle: "@moofield",
+  /** The official Moofield X account (the From X section embeds its timeline; no X API). */
+  x: "https://x.com/M00FIELD" as string | null,
+  xHandle: "@M00FIELD",
   /** CONFIRM */
   telegram: null as string | null,
   /** CONFIRM */
   discord: null as string | null,
-} as const;
-
-/**
- * The "From X" section on the home page, for the account in SOCIAL.x (until that is set it says the
- * account is coming soon). Three ways it can look, picked automatically:
- *  1. Live: the latest posts, read server-side from the X API. Turned on by ONE setting, the
- *     X_BEARER_TOKEN environment variable (secret, server-only). X bills per post read; posts are
- *     cached for `ttlMs`, so a refresh every 15 minutes costs well under $1 a month.
- *  2. Featured: no token, but `featuredPosts` lists post URLs. They are embedded with X's own widget.
- *  3. Follow: neither. A "Follow us on X" card.
- */
-export const X_FEED = {
-  tokenEnv: "X_BEARER_TOKEN",
-  /** Posts shown (the API returns at least 5; the rest are dropped). */
-  maxPosts: 3,
-  ttlMs: 15 * 60_000,
-  /** The account lookup (name, avatar, user id) changes rarely. */
-  profileTtlMs: 24 * 3_600_000,
-  /** After this age a kept result is flagged stale (X unreachable). */
-  staleMs: 24 * 3_600_000,
-  timeoutMs: 8_000,
-  /** Optional: full post URLs (https://x.com/<handle>/status/<id>) shown when no token is set. */
-  featuredPosts: [] as string[],
 } as const;
 
 /** Orbio's own account, credited wherever the Docs mention Orbio. */

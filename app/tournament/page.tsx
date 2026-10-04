@@ -79,6 +79,9 @@ export default async function TournamentPage() {
                   <p className="text-sm text-soil/70">
                     by {r.winnerFighter} · {formatDate(r.startedAt)} to {formatDate(r.endedAt)}
                   </p>
+                  <Link href={`/tournament/recaps/${r.number}`} className="tap link mt-2 inline-block text-sm">
+                    Read the recap
+                  </Link>
                 </div>
                 <dl className="grid grid-cols-3 gap-6 text-sm">
                   <div>

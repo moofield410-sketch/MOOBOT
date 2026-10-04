@@ -4,7 +4,7 @@ export type Address = `0x${string}`;
 export type Hash = `0x${string}`;
 
 /** "live" = real site data (for example, the Tournament's own records), even when empty. */
-export type DataSourceKind = "mock" | "chain" | "orbio" | "x" | "live" | "unavailable";
+export type DataSourceKind = "mock" | "chain" | "orbio" | "live" | "unavailable";
 
 /** Every data card is backed by one of these, so it can show "last updated" and a stale warning. */
 export interface DataEnvelope<T> {
