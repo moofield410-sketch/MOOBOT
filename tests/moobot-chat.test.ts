@@ -74,7 +74,7 @@ describe("MooBot chat answers", () => {
   it("sends the key, the model, the rules and the question, and returns the answer", async () => {
     on();
     const r = await ask("What is Moofield?", answer("Moofield is a meadow."));
-    assert.deepEqual(r, { ok: true, reply: "Moofield is a meadow.", remainingToday: C.perVisitorPerDay - 1 });
+    assert.deepEqual(r, { ok: true, reply: "Moofield is a meadow.", remainingToday: null });
     assert.equal(calls[0].url, `${GATEWAY.baseUrl}/chat/completions`);
     assert.equal(calls[0].auth, "Bearer test-key");
     assert.equal(calls[0].body.model, C.model);
@@ -87,14 +87,13 @@ describe("MooBot chat answers", () => {
     assert.deepEqual(msgs.at(-1), { role: "user", content: "What is Moofield?" });
   });
 
-  it("allows each visitor their daily questions, then stops", async () => {
+  it("with no per-visitor limit (the current setting), one visitor keeps asking and nothing about them is kept", async () => {
+    assert.equal(C.perVisitorPerDay, null);
     on();
-    for (let i = 0; i < C.perVisitorPerDay; i++) assert.equal((await ask(`q${i}`, answer("moo"))).ok, true);
-    const r = await ask("one more", answer("moo"));
-    assert.equal(r.ok, false);
-    assert.equal(!r.ok && r.reason, "visitor-limit");
-    assert.equal(calls.length, C.perVisitorPerDay);
-    assert.equal((await ask("someone else", answer("moo"), "5.6.7.8")).ok, true, "another visitor still can");
+    for (let i = 0; i < 25; i++) assert.equal((await ask(`q${i}`, answer("moo"))).ok, true);
+    const ledger = await kvGet<{ visitors: Record<string, number> }>(`chat:day:${new Date().toISOString().slice(0, 10)}`);
+    assert.deepEqual(ledger!.visitors, {});
+    assert.deepEqual(await chatUsage("1.2.3.4"), { enabled: true, remainingToday: null, resting: false });
   });
 
   it("a daily budget, when set, refuses any call whose worst case would pass it", () => {
@@ -103,7 +102,7 @@ describe("MooBot chat answers", () => {
     assert.equal(overBudget(1_000_000, 1, null), false, "no budget set: never refused for spending");
   });
 
-  it("with no spending limit (the current setting) it keeps answering, records what it spends, and only the per-visitor limit applies", async () => {
+  it("with no spending limit (the current setting) it keeps answering and records what it spends", async () => {
     assert.equal(C.dailyBudgetUsd, null);
     on();
     for (let i = 0; i < 50; i++) assert.equal((await ask("q", answer("moo"), `10.0.0.${i}`)).ok, true);
@@ -118,7 +117,6 @@ describe("MooBot chat answers", () => {
     assert.equal(r.ok, false);
     assert.equal(!r.ok && r.reason, "error");
     assert.doesNotMatch(!r.ok ? r.message : "", /key|balance/i, "visitors don't see Orbio's internal reason");
-    assert.equal((await chatUsage("1.2.3.4")).remainingToday, C.perVisitorPerDay);
     const ledger = await kvGet<{ spentUsd: number }>(`chat:day:${new Date().toISOString().slice(0, 10)}`);
     assert.equal(ledger!.spentUsd, 0);
   });

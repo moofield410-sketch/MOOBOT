@@ -139,7 +139,10 @@ export function docVars(): Record<string, string> {
     REPEAT_SHARE: fraction(REWARDS.repeatWinner.factor),
     MASTER_MIN_SCORED: String(REWARDS.mastersParticipation.minScoredPitches),
     MASTERS_REFRESH_MIN: String(Math.round(CACHE.mastersTtlMs / 60_000)),
-    CHAT_PER_DAY: word(GATEWAY.chat.perVisitorPerDay),
+    CHAT_LIMIT:
+      GATEWAY.chat.perVisitorPerDay === null
+        ? "There's no daily question limit."
+        : `Each visitor can ask ${word(GATEWAY.chat.perVisitorPerDay)} questions a day.`,
     X_HANDLE: SOCIAL.xHandle,
     AURA_TIERS: HOLDER_AURA_TIERS.map((a) => `${a.name} (${int(a.minMooBot)}+)`).join(", "),
     REWARDS_WORKED_EXAMPLE: rewardsWorkedExample(),

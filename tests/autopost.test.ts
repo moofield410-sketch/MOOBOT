@@ -2,14 +2,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { GET as cronAutopost } from "@/app/api/cron/autopost/route";
-import { GATEWAY } from "@/config";
+import { ECOBOT, GATEWAY } from "@/config";
 import { boardDraft, graduationDraft, launchDraft, LINK_RE, MAX_POST_CHARS, recapDraft, type Draft } from "@/lib/autopost/drafts";
 import { autoPostStatus, dueDrafts, runAutoPost, type AutoPostSources } from "@/lib/autopost/run";
 import { dailyBoard, kindsFor, parseDay, rowsFor } from "@/lib/bloom-pop";
-import { kvClearMemory } from "@/lib/kv";
+import { kvClearMemory, kvSet } from "@/lib/kv";
 import type { MooBotState } from "@/lib/moobot";
 import type { GatewayFetch } from "@/lib/orbio-gateway";
 import type { Master } from "@/lib/types";
+import { xAllowance } from "@/lib/xpost";
 
 /** Auto-posts to @M00FIELD. A fake Orbio gateway stands in for social.post; nothing is posted. */
 const A = GATEWAY.autopost;
@@ -68,6 +69,7 @@ afterEach(() => {
 function checkDraft(d: Draft) {
   assert.ok(d.text.length <= MAX_POST_CHARS, `${d.key} is ${d.text.length} characters`);
   assert.doesNotMatch(d.text, LINK_RE, `${d.key} contains a link`);
+  assert.ok((d.text.match(/\$[A-Za-z][A-Za-z0-9]*/g) ?? []).length <= 1, `${d.key} has more than one cashtag`);
   for (const re of BANNED) assert.doesNotMatch(d.text, re, `${d.key} matches ${re}`);
   for (const m of d.media ?? []) assert.ok(m.url.startsWith("https://"), "media must be public https");
 }
@@ -138,12 +140,21 @@ describe("Auto-post runs", () => {
     assert.deepEqual(r, { mode: "off", posted: [], drafted: [], skipped: [], failed: [], error: null });
   });
 
-  it("on posts each due post once, with no links allowed and the cost capped", async () => {
+  it("on posts each due post once, paced: the launch goes at once, then one post per gap", async () => {
     env(A.env, "on");
     env(GATEWAY.keyEnv, "test-key");
-    const r = await runAutoPost({ now: AFTERNOON, fetch: gateway(), sources: sources({ moobot: verified }) });
-    assert.deepEqual(r.posted.map((p) => p.key), ["launch", "board:2026-10-05", "recap:2026-10-05"]);
-    assert.equal(r.posted[0].url, "https://x.com/M00FIELD/status/1");
+    const gap = ECOBOT.minGapMinutes * 60_000;
+    const run = (t: number) => runAutoPost({ now: t, fetch: gateway(), sources: sources({ moobot: verified }) });
+
+    const first = await run(AFTERNOON);
+    assert.deepEqual(first.posted.map((p) => p.key), ["launch"]);
+    assert.deepEqual(first.skipped, ["board:2026-10-05", "recap:2026-10-05"], "the rest waits for the pace");
+    assert.equal(first.posted[0].url, "https://x.com/M00FIELD/status/1");
+    assert.deepEqual((await run(AFTERNOON + gap / 2)).posted, [], "nothing inside the gap");
+    assert.deepEqual((await run(AFTERNOON + gap)).posted.map((p) => p.key), ["board:2026-10-05"]);
+    assert.deepEqual((await run(AFTERNOON + 2 * gap)).posted.map((p) => p.key), ["recap:2026-10-05"]);
+    assert.deepEqual((await run(AFTERNOON + 3 * gap)).posted, [], "never twice");
+
     for (const p of posts) {
       assert.deepEqual(p.platforms, ["twitter"]);
       assert.equal(p.allow_links, false);
@@ -153,11 +164,9 @@ describe("Auto-post runs", () => {
     assert.ok(launch >= 0.0352 && launch < 0.05, `launch cap ${launch}`);
     assert.ok(board >= 0.0352 && board < 0.05, `board cap ${board}`);
     assert.ok(recap >= 0.0187 && recap < 0.03, `recap cap ${recap}`);
-    // The next run, and the next day's run, never repeat the launch.
-    await runAutoPost({ now: AFTERNOON + 15 * 60_000, fetch: gateway(), sources: sources({ moobot: verified }) });
-    assert.equal(posts.length, 3);
-    const tomorrow = await runAutoPost({ now: AFTERNOON + 86_400_000, fetch: gateway(), sources: sources({ moobot: verified }) });
-    assert.deepEqual(tomorrow.posted.map((p) => p.key), ["board:2026-10-06", "recap:2026-10-06"]);
+    // The next day: the launch is never repeated.
+    const tomorrow = await run(AFTERNOON + 86_400_000);
+    assert.deepEqual(tomorrow.posted.map((p) => p.key), ["board:2026-10-06"]);
   });
 
   it("before the times of day, only what's due goes out", async () => {
@@ -169,30 +178,49 @@ describe("Auto-post runs", () => {
     assert.deepEqual(morning.posted.map((p) => p.key), ["board:2026-10-05"]);
   });
 
-  it("the first run only remembers the existing Masters; new ones get a shout-out, at most the daily cap", async () => {
+  it("the first run only remembers the existing Masters; new ones get a shout-out each, paced, none lost", async () => {
     env(A.env, "on");
     env(GATEWAY.keyEnv, "test-key");
-    const night = Date.parse("2026-10-05T00:00:00Z");
-    await runAutoPost({ now: night, fetch: gateway(), sources: sources({ masters: [master(1), master(2)] }) });
-    assert.equal(posts.length, 0, "existing Masters are not announced");
+    env(A.skipEnv, "board");
+    try {
+      const night = Date.parse("2026-10-05T00:00:00Z");
+      const gap = ECOBOT.minGapMinutes * 60_000;
+      await runAutoPost({ now: night, fetch: gateway(), sources: sources({ masters: [master(1), master(2)] }) });
+      assert.equal(posts.length, 0, "existing Masters are not announced");
 
-    const many = [master(1), master(2), ...Array.from({ length: A.graduationsPerDay + 2 }, (_, i) => master(100 + i))];
-    const r = await runAutoPost({ now: night + 60_000, fetch: gateway(), sources: sources({ masters: many }) });
-    assert.equal(r.posted.filter((p) => p.key.startsWith("grad:")).length, A.graduationsPerDay);
-    assert.equal(r.skipped.length, 2);
-    // The held-back ones come the next day.
-    const next = await runAutoPost({ now: night + 86_400_000 + 60_000, fetch: gateway(), sources: sources({ masters: many }) });
-    assert.equal(next.posted.filter((p) => p.key.startsWith("grad:")).length, 2);
+      const many = [master(1), master(2), master(100), master(101), master(102)];
+      const keys: string[] = [];
+      for (let i = 1; i <= 4; i++) keys.push(...(await runAutoPost({ now: night + i * gap, fetch: gateway(), sources: sources({ masters: many }) })).posted.map((p) => p.key));
+      assert.deepEqual(keys.sort(), [master(100), master(101), master(102)].map((m) => `grad:${m.tokenAddress}`).sort());
+    } finally {
+      env(A.skipEnv, undefined);
+    }
   });
 
-  it("never more than the daily post cap in total", async () => {
+  it("with the Eco Bot running, the recap and graduation posts are left to it", async () => {
+    env(A.env, "preview");
+    env(ECOBOT.env, "preview");
+    try {
+      await runAutoPost({ now: AFTERNOON - 3_600_000, sources: sources({ masters: [master(1)] }) });
+      const r = await runAutoPost({ now: AFTERNOON, sources: sources({ moobot: verified, masters: [master(1), master(9)] }) });
+      assert.deepEqual(r.drafted, ["launch", "board:2026-10-05"]);
+    } finally {
+      env(ECOBOT.env, undefined);
+    }
+  });
+
+  it("stops for the day when Orbio says the X allowance is used up", async () => {
     env(A.env, "on");
     env(GATEWAY.keyEnv, "test-key");
-    await runAutoPost({ now: Date.parse("2026-10-05T00:00:00Z"), fetch: gateway(), sources: sources({ masters: [] }) });
-    const many = Array.from({ length: 30 }, (_, i) => master(500 + i));
-    // Launch, board, recap and 30 new Masters over several runs in one day: the total cap still holds.
-    for (let i = 1; i < 10; i++) await runAutoPost({ now: AFTERNOON + i * 60_000, fetch: gateway(), sources: sources({ moobot: verified, masters: many }) });
-    assert.ok(posts.length <= A.postsPerDay, `${posts.length} posts`);
+    const lastOne: GatewayFetch = async (url, init) => {
+      posts.push(JSON.parse(init.body));
+      return { status: 200, json: async () => ({ result: { status: "published", platforms: [{ platformPostUrl: "https://x.com/M00FIELD/status/9" }], remaining_today: { twitter: { posts_used: 50, posts_left: 0 } } }, cost: { credit: "0.0187" } }) };
+    };
+    await runAutoPost({ now: Date.parse("2026-10-05T08:00:00Z"), fetch: lastOne, sources: sources() });
+    assert.equal(posts.length, 1);
+    const r = await runAutoPost({ now: AFTERNOON, fetch: lastOne, sources: sources({ moobot: verified }) });
+    assert.deepEqual(r.posted, [], "not even the launch: Orbio would refuse it");
+    assert.equal((await xAllowance(AFTERNOON)).postsLeft, 0);
   });
 
   it("a refused post is reported and retried next run, never marked as sent", async () => {
@@ -215,13 +243,55 @@ describe("Auto-post runs", () => {
     };
     const r = await runAutoPost({ now: AFTERNOON, fetch: picky, sources: sources({ moobot: verified }) });
     assert.deepEqual(r.failed, ["launch", "board:2026-10-05"]);
-    assert.deepEqual(r.posted.map((p) => p.key), ["recap:2026-10-05"]);
+    assert.deepEqual(r.posted.map((p) => p.key), ["recap:2026-10-05"], "a refusal doesn't use up the pace");
     assert.match(r.error ?? "", /launch: Orbio refused the request \(arguments or cost cap\): quote 0\.0352 exceeds max_cost/);
     assert.match((await autoPostStatus(AFTERNOON)).lastError ?? "", /exceeds max_cost/);
-    // Fixed on the next run: the refused ones go out, the recap isn't repeated.
+    // Fixed: the launch goes at once, the board after the gap, the recap isn't repeated.
     const next = await runAutoPost({ now: AFTERNOON + 900_000, fetch: gateway(), sources: sources({ moobot: verified }) });
-    assert.deepEqual(next.posted.map((p) => p.key), ["launch", "board:2026-10-05"]);
+    assert.deepEqual(next.posted.map((p) => p.key), ["launch"]);
     assert.equal(next.error, null);
+    const later = await runAutoPost({ now: AFTERNOON + 900_000 + ECOBOT.minGapMinutes * 60_000, fetch: gateway(), sources: sources({ moobot: verified }) });
+    assert.deepEqual(later.posted.map((p) => p.key), ["board:2026-10-05"]);
+  });
+
+  it("a post X fails to publish is retried with X's reason shown, then given up after a few tries", async () => {
+    env(A.env, "on");
+    env(GATEWAY.keyEnv, "test-key");
+    env(A.skipEnv, "board");
+    try {
+      const xFails: GatewayFetch = async (url, init) => {
+        const body = JSON.parse(init.body);
+        if (!body.text.startsWith("🐄 Moofield daily")) return gateway()(url, init);
+        return { status: 200, json: async () => ({ result: { post_id: null, status: "failed", platforms: [{ platform: "twitter", status: "failed", error: "Duplicate content" }] }, cost: { credit: null } }) };
+      };
+      let r = await runAutoPost({ now: AFTERNOON, fetch: xFails, sources: sources() });
+      assert.deepEqual(r.failed, ["recap:2026-10-05"]);
+      assert.match(r.error ?? "", /recap:2026-10-05: X didn't publish it \(Duplicate content\), will retry/);
+      for (let i = 1; i < A.maxAttempts; i++) r = await runAutoPost({ now: AFTERNOON + i * 900_000, fetch: xFails, sources: sources() });
+      assert.match(r.error ?? "", /gave up/);
+      const after = await runAutoPost({ now: AFTERNOON + (A.maxAttempts + 2) * 900_000, fetch: xFails, sources: sources() });
+      assert.deepEqual(after.failed, [], "not tried again once given up");
+    } finally {
+      env(A.skipEnv, undefined);
+    }
+  });
+
+  it("a recap an earlier version marked 'failed' is tried again", async () => {
+    env(A.env, "on");
+    env(GATEWAY.keyEnv, "test-key");
+    env(A.skipEnv, "board");
+    try {
+      await kvSet("autopost:log", {
+        posted: { "recap:2026-10-05": { key: "recap:2026-10-05", at: new Date(AFTERNOON).toISOString(), status: "failed", url: null } },
+        counts: {},
+        lastRunAt: null,
+        lastError: null,
+      });
+      const r = await runAutoPost({ now: AFTERNOON, fetch: gateway(), sources: sources() });
+      assert.ok(r.posted.some((p) => p.key === "recap:2026-10-05" && p.status === "published"));
+    } finally {
+      env(A.skipEnv, undefined);
+    }
   });
 
   it("AUTO_POST_SKIP=launch never posts the launch (for when it was posted by hand)", async () => {

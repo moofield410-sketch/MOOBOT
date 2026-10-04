@@ -46,11 +46,11 @@ Tapping MooBot plays a little flex animation. That's all, and it never gives any
 
 ## Can I chat with MooBot?
 
-When the chat is switched on, the floating MooBot shows "Ask MooBot a question". His answers are written by AI from these Docs and the site's live data, so they can be wrong: the Docs always win. He never gives financial advice, and he only ever shows the official $MOOBOT contract confirmed on Orbio. Each visitor can ask {{CHAT_PER_DAY}} questions a day. Never share a seed phrase or private key with anyone, MooBot included.
+When the chat is switched on, the floating MooBot shows "Ask MooBot a question". His answers are written by AI from these Docs and the site's live data, so they can be wrong: the Docs always win. He never gives financial advice, and he only ever shows the official $MOOBOT contract confirmed on Orbio. {{CHAT_LIMIT}} Never share a seed phrase or private key with anyone, MooBot included.
 
 ## Who posts on {{X_HANDLE}}?
 
-The team, plus a few automatic posts written from the site's own data: the launch announcement, the daily Bloom Pop field, a daily numbers recap and a welcome for each newly graduated Master. Automatic posts never contain links, so a post with a link that claims to be automatic isn't ours.
+The team, plus MooBot himself. A few fixed posts come from the site's own data: the launch announcement and the daily Bloom Pop field. When the MooBot Eco Bot is on, MooBot also watches every agent on Orbio and posts the news he finds: big moves on tokens of real size, market cap milestones, graduations, strong new launches, ecosystem records and a daily digest. He reads Orbio's data, the token's own X posts and the web before he writes, only reports what he can show, and every market post ends with NFA: it's information, never advice. Automatic posts never contain links, contract addresses or mentions, so a post with one that claims to be automatic isn't ours. The Status page lists them.
 
 ## Why do some figures say n/a?
 

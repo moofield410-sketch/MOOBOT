@@ -83,6 +83,76 @@ export async function chatCompletion(
   return { text, inputTokens: n(usage?.prompt_tokens), outputTokens: n(usage?.completion_tokens) };
 }
 
+// ---------------------------------------------------------------------------
+// Tool calling (OpenAI shape): the model asks for a function, we run it and send back the result.
+// ---------------------------------------------------------------------------
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  /** JSON text, as the model wrote it. */
+  arguments: string;
+}
+
+export type TurnMessage =
+  | { role: "system" | "user"; content: string }
+  | { role: "assistant"; content: string | null; tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[] }
+  | { role: "tool"; tool_call_id: string; content: string };
+
+export interface ToolSpec {
+  name: string;
+  description: string;
+  /** JSON Schema of the arguments. */
+  parameters: Record<string, unknown>;
+}
+
+export interface TurnResult {
+  content: string | null;
+  toolCalls: ToolCall[];
+  inputTokens: number | null;
+  outputTokens: number | null;
+}
+
+/** One model turn that may ask for tools. `timeoutMs` bounds this call (the caller's time budget). */
+export async function chatTurn(
+  messages: TurnMessage[],
+  opts: { model: string; maxTokens: number; temperature: number; tools?: ToolSpec[]; toolChoice?: "auto" | "none"; timeoutMs?: number },
+  f?: GatewayFetch,
+): Promise<TurnResult> {
+  const fetcher: GatewayFetch =
+    f ?? ((url, init) => fetch(url, { ...init, cache: "no-store", signal: AbortSignal.timeout(Math.max(1_000, Math.min(GATEWAY.timeoutMs, opts.timeoutMs ?? GATEWAY.timeoutMs))) }));
+  const { body } = await post(
+    "/chat/completions",
+    {
+      model: opts.model,
+      messages,
+      max_tokens: opts.maxTokens,
+      temperature: opts.temperature,
+      ...(opts.tools?.length
+        ? { tools: opts.tools.map((t) => ({ type: "function", function: t })), tool_choice: opts.toolChoice ?? "auto" }
+        : {}),
+    },
+    fetcher,
+  );
+  const b = obj(body);
+  const message = obj(obj(Array.isArray(b?.choices) ? b.choices[0] : null)?.message);
+  if (!message) throw new GatewayError(502, "Orbio returned no answer");
+  const calls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
+  const toolCalls = calls.flatMap((c): ToolCall[] => {
+    const o = obj(c);
+    const fn = obj(o?.function);
+    return typeof o?.id === "string" && typeof fn?.name === "string" ? [{ id: o.id, name: fn.name, arguments: typeof fn.arguments === "string" ? fn.arguments : "{}" }] : [];
+  });
+  const usage = obj(b?.usage);
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  return {
+    content: typeof message.content === "string" ? message.content : null,
+    toolCalls,
+    inputTokens: n(usage?.prompt_tokens),
+    outputTokens: n(usage?.completion_tokens),
+  };
+}
+
 export type ToolResult =
   | { status: "settled"; result: unknown; costCredit: string | null }
   /** Orbio accepted it and is still working. Never resubmit this one (Orbio's docs). */

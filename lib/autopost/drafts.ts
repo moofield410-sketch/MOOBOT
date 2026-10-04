@@ -4,7 +4,7 @@ import { formatInt } from "@/lib/format";
 /**
  * The posts Moofield writes to @M00FIELD by itself (lib/autopost/run.ts sends them). Fixed
  * templates filled with the site's own data, no AI, so every word is known in advance and tested
- * (tests/autopost.test.ts): at most 280 characters (a free X account), and no links or domains
+ * (tests/autopost.test.ts): at most 280 characters (a free X account), at most one $cashtag, and no links or domains
  * (X bills a post with a link at $0.200 instead of $0.015, and Orbio refuses it without allow_links).
  */
 
@@ -70,7 +70,8 @@ export interface RecapFacts {
 export function recapDraft(day: string, f: RecapFacts): Draft | null {
   const lines: string[] = [];
   if (f.agents !== null) lines.push(`• Agents on Orbio: ${formatInt(f.agents)}${f.launchedYesterday !== null ? ` (+${formatInt(f.launchedYesterday)} yesterday)` : ""}`);
-  if (f.fieldFund !== null) lines.push(`• Field Fund: ${f.fieldFund} $CREDIT received`);
+  // At most one cashtag per post: X's API refuses posts with several ($MOOBOT below is the one).
+  if (f.fieldFund !== null) lines.push(`• Field Fund: ${f.fieldFund} Orbio credits received`);
   if (f.moobotPrice !== null) {
     const ch = f.moobotChangePct;
     lines.push(`• ${SITE.ticker}: ${f.moobotPrice}${ch !== null ? ` (${ch > 0 ? "+" : ""}${ch.toFixed(1)}% in 24h)` : ""}`);

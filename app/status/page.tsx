@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Card, PageHeader } from "@/components/ui/Card";
 import { StatRow } from "@/components/ui/Stats";
-import { GATEWAY } from "@/config";
+import { ECOBOT, GATEWAY } from "@/config";
 import { autoPostStatus } from "@/lib/autopost/run";
+import { ecoBotStatus } from "@/lib/ecobot/run";
+import { xAllowance } from "@/lib/xpost";
 import { formatInt, formatUpdated } from "@/lib/format";
 import { chatEnabled, chatSpendToday } from "@/lib/moobot-chat";
 import { getStatus } from "@/lib/status";
@@ -36,9 +38,10 @@ function StatusPill({ tone, children }: { tone: "good" | "warn" | "off"; childre
 }
 
 const AUTO_POST_LABEL = { off: "Off", preview: "Preview (drafts only)", on: "On" } as const;
+const ECO_MODE_LABEL = { off: "Off", preview: "Preview (drafts, AI on)", on: "On (posting)" } as const;
 
 export default async function StatusPage() {
-  const [s, autopost, chatSpend] = await Promise.all([getStatus(), autoPostStatus(), chatSpendToday()]);
+  const [s, autopost, chatSpend, eco, allowance] = await Promise.all([getStatus(), autoPostStatus(), chatSpendToday(), ecoBotStatus(), xAllowance()]);
   const chatOn = chatEnabled();
   // A missing RPC_URL only affects wallet balances, so it isn't reported as "delayed".
   const health: Health =
@@ -146,7 +149,7 @@ export default async function StatusPage() {
               label="Spent today (UTC)"
               value={GATEWAY.chat.dailyBudgetUsd === null ? `$${chatSpend.toFixed(2)} (no daily limit)` : `$${chatSpend.toFixed(2)} of $${GATEWAY.chat.dailyBudgetUsd.toFixed(2)}`}
             />
-            <StatRow label="Questions per visitor" value={`${GATEWAY.chat.perVisitorPerDay} a day`} />
+            <StatRow label="Questions per visitor" value={GATEWAY.chat.perVisitorPerDay === null ? "No limit" : `${GATEWAY.chat.perVisitorPerDay} a day`} />
           </dl>
           {!chatOn && <p className="mt-3 text-sm text-soil/80">Turns on with MOOBOT_CHAT=on and ORBIO_API_KEY set.</p>}
         </Card>
@@ -158,7 +161,9 @@ export default async function StatusPage() {
             label="Auto-post"
             value={<StatusPill tone={autopost.mode === "on" ? "good" : autopost.mode === "preview" ? "warn" : "off"}>{AUTO_POST_LABEL[autopost.mode]}</StatusPill>}
           />
-          <StatRow label="Posts today (UTC)" value={`${autopost.postsToday} of ${GATEWAY.autopost.postsPerDay}`} />
+          <StatRow label="Fixed posts today (UTC)" value={formatInt(autopost.postsToday)} />
+          <StatRow label="X posts left today (Orbio's limit)" value={allowance.postsLeft === null ? "n/a" : formatInt(allowance.postsLeft)} />
+          <StatRow label="Pace" value={`at least ${ECOBOT.minGapMinutes} min between posts`} />
           <StatRow label="Last run" value={autopost.lastRunAt ? formatUpdated(autopost.lastRunAt).replace("Updated ", "") : "Not yet"} />
           {autopost.lastError && <StatRow label="Last problem" value={<span className="text-sm font-normal">{autopost.lastError}</span>} />}
         </dl>
@@ -205,6 +210,55 @@ export default async function StatusPage() {
                 ))}
               </ul>
             )}
+          </>
+        )}
+      </Card>
+
+      <Card title="MooBot Eco Bot">
+        <dl>
+          <StatRow
+            label="Eco bot"
+            value={<StatusPill tone={eco.mode === "on" ? "good" : eco.mode === "preview" ? "warn" : "off"}>{ECO_MODE_LABEL[eco.mode]}</StatusPill>}
+          />
+          <StatRow label="Last run" value={eco.lastRunAt ? `${formatUpdated(eco.lastRunAt).replace("Updated ", "")}${eco.lastNote ? ` · ${eco.lastNote}` : ""}` : "Not yet"} />
+          <StatRow label="Waiting news" value={formatInt(eco.pending)} />
+          <StatRow
+            label="Spent today (UTC)"
+            value={`$${eco.spend.modelUsd.toFixed(2)} AI · ${eco.spend.researchCredit.toFixed(2)} research · ${eco.spend.postCredit.toFixed(2)} posts`}
+          />
+          {eco.lastError && <StatRow label="Last problem" value={<span className="text-sm font-normal">{eco.lastError}</span>} />}
+        </dl>
+        {eco.mode === "off" && <p className="mt-3 text-sm text-soil/80">Turns on with ECO_BOT=preview (drafts) or ECO_BOT=on (posts), and ORBIO_API_KEY set.</p>}
+
+        {eco.lastDecision && (
+          <div className="mt-5 rounded-xl border border-line bg-hay/40 p-4 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fern">Last decision · {formatUpdated(eco.lastDecision.at).replace("Updated ", "")}</p>
+            <p className="mt-2 text-soil">{eco.lastDecision.why}</p>
+            {eco.lastDecision.research.length > 0 && <p className="mt-2 text-xs text-fern">Looked at: {eco.lastDecision.research.join(" · ")}</p>}
+          </div>
+        )}
+
+        {(eco.mode === "on" ? eco.posts : eco.drafts).length > 0 && (
+          <>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-fern">{eco.mode === "on" ? "Recent posts" : "Drafts (what it would post)"}</p>
+            <ul className="mt-3 grid gap-3 md:grid-cols-2">
+              {(eco.mode === "on" ? eco.posts : eco.drafts).map((p) => (
+                <li key={p.at + p.signal} className="rounded-xl border border-line bg-hay/40 p-4">
+                  <p className="whitespace-pre-line break-words text-sm text-soil">{p.text}</p>
+                  <p className="mt-2 font-mono text-[11px] text-fern">
+                    {formatUpdated(p.at).replace("Updated ", "")} · {p.signal.split(":")[0]}
+                    {"url" in p && p.url && (
+                      <>
+                        {" · "}
+                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="link">
+                          view on X
+                        </a>
+                      </>
+                    )}
+                  </p>
+                </li>
+              ))}
+            </ul>
           </>
         )}
       </Card>

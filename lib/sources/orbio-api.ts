@@ -47,6 +47,8 @@ export interface OrbioAgent {
   launchedAt: string | null;
   launchTx: Hash | null;
   description: string | null;
+  /** The agent's X link as it set it on Orbio (socials.twitter), unchecked. */
+  twitter: string | null;
   price: { source: string | null; graduated: boolean | null; priceMicroUsd: string | null; marketCapMicroUsd: string | null } | null;
   curve: { graduated: boolean | null; progressBps: number | null } | null;
   /** $CREDIT (6 decimals). Orbio: it accrues for the agent ("owed"); claimAgentCredit sends it to the agent wallet ("claimed"). */
@@ -82,6 +84,7 @@ export function parseAgent(raw: unknown): OrbioAgent | null {
     launchedAt: str(r.launchedAt),
     launchTx: (str(r.launchTx) as Hash | null) ?? null,
     description: str(r.description),
+    twitter: str(obj(r.socials)?.twitter),
     price: price
       ? { source: str(price.source), graduated: typeof price.graduated === "boolean" ? price.graduated : null, priceMicroUsd: str(price.priceMicroUsd), marketCapMicroUsd: str(price.marketCapMicroUsd) }
       : null,

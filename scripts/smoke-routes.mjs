@@ -100,6 +100,8 @@ const PAGES = [
   // MooBot chat and auto-posts: off and preview without a key (the default).
   ["/status", 200, "Talk to MooBot"],
   ["/status", 200, "Preview (drafts only)"],
+  ["/status", 200, "MooBot Eco Bot"],
+  ["/status", 200, "Turns on with ECO_BOT=preview"],
   ["/docs/faq", 200, "Can I chat with MooBot?"],
   ["/privacy", 200, "Chatting with MooBot"],
   ["/tournament/recaps", 200, "No recaps yet"],

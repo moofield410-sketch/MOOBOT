@@ -168,7 +168,8 @@ export const GATEWAY = {
      * owner's choice, 2026-10-04): only perVisitorPerDay limits use. Spend is still recorded for Status.
      */
     dailyBudgetUsd: null as number | null,
-    perVisitorPerDay: 10,
+    /** Questions per visitor per UTC day. null = no limit (the owner's choice, 2026-10-04); then no visitor id is kept. */
+    perVisitorPerDay: null as number | null,
     maxInputChars: 500,
     /** Messages of history sent with each question (visitor and MooBot together). */
     maxTurns: 6,
@@ -186,13 +187,56 @@ export const GATEWAY = {
     perImageMaxCost: 0.0175,
     /** AUTO_POST_SKIP: comma-separated kinds never to post, e.g. "launch" if it was posted by hand. */
     skipEnv: "AUTO_POST_SKIP",
-    postsPerDay: 8,
-    graduationsPerDay: 5,
+    /** Times a post X failed to publish is tried before giving up on it. */
+    maxAttempts: 3,
     /** UTC hour after which the daily recap goes out. */
     recapHourUtc: 12,
     /** Minutes past 00:00 UTC after which the daily Bloom Pop board goes out. */
     boardAfterMinutes: 5,
   },
+} as const;
+
+/**
+ * The MooBot Eco Bot (lib/ecobot): watches every agent on Orbio, researches what matters and
+ * decides for itself what @M00FIELD posts. ECO_BOT=off|preview|on, off by default. Preview runs
+ * the AI and research (that costs credits) but only saves drafts for the Status page.
+ * No daily post limit (the owner's choice); posts are paced instead. Orbio itself allows an X
+ * account 50 original posts a UTC day.
+ */
+export const ECOBOT = {
+  env: "ECO_BOT",
+  model: "anthropic/claude-sonnet-5.5",
+  /** US dollars per token (Orbio's model catalogue, checked 2026-10-04). */
+  pricePerInputToken: 0.000002,
+  pricePerOutputToken: 0.00001,
+  maxTokens: 900,
+  temperature: 0.5,
+  /** At least this long between any two posts on @M00FIELD (fixed posts included). */
+  minGapMinutes: 30,
+  /** Engineering limits for one run, so it can't loop forever. Not a cap on posts. */
+  maxToolCalls: 6,
+  budgetMs: 45_000,
+  /** Signals (lib/ecobot/signals.ts). */
+  floorUsd: 25_000,
+  move1hPct: 25,
+  move24hPct: 50,
+  cooldownH: 6,
+  milestonesUsd: [100_000, 250_000, 500_000, 1_000_000, 5_000_000, 10_000_000],
+  nearGraduationBps: 9_000,
+  hotLaunchUsd: 50_000,
+  hotLaunchH: 24,
+  comebackDrawdownPct: 40,
+  comebackNearPct: 10,
+  agentsStep: 100,
+  ecoMcapMovePct: 10,
+  creditMilestones: [100, 250, 500, 1_000, 2_500, 5_000, 10_000, 25_000, 50_000, 100_000],
+  digestHourUtc: 14,
+  /** Signals shown to the editor per run, and hours a not-yet-posted one-off signal stays news. */
+  maxSignals: 8,
+  pendingTtlH: 24,
+  /** Hourly price readings kept (just over a day). */
+  historyHours: 26,
+  recentPosts: 20,
 } as const;
 
 /** On-chain graduation log scanning. Unused while no launchpad contract is published. */

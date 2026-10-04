@@ -17,7 +17,7 @@ import { buildTimeline } from "@/lib/schedule";
  * "Talk to MooBot": a short AI chat about Moofield, answered by Orbio's model gateway and paid
  * from the owner's Orbio balance. SERVER-SIDE ONLY. Off unless MOOBOT_CHAT=on and ORBIO_API_KEY
  * is set. Limits: GATEWAY.chat.dailyBudgetUsd per UTC day for everyone together (null = none), and
- * perVisitorPerDay questions per visitor. Messages are never stored.
+ * perVisitorPerDay questions per visitor (null = none). Messages are never stored.
  */
 
 const C = GATEWAY.chat;
@@ -85,9 +85,13 @@ export function visitorId(ip: string, day: string): string {
   return (secret ? createHmac("sha256", secret).update(data) : createHash("sha256").update(data)).digest("base64url").slice(0, 22);
 }
 
+/** Questions left for a visitor who has asked `used` today. null = no limit. */
+const leftAfter = (used: number): number | null => (C.perVisitorPerDay === null ? null : Math.max(0, C.perVisitorPerDay - used));
+
 export interface ChatUsage {
   enabled: boolean;
-  remainingToday: number;
+  /** null = no per-visitor limit. */
+  remainingToday: number | null;
   /** The shared daily budget is used up: MooBot rests until 00:00 UTC. */
   resting: boolean;
 }
@@ -98,7 +102,7 @@ export async function chatUsage(ip: string, now = Date.now()): Promise<ChatUsage
   const l = await readLedger(day);
   return {
     enabled: true,
-    remainingToday: Math.max(0, C.perVisitorPerDay - (l.visitors[visitorId(ip, day)] ?? 0)),
+    remainingToday: C.perVisitorPerDay === null ? null : leftAfter(l.visitors[visitorId(ip, day)] ?? 0),
     resting: overBudget(l.spentUsd, worstCaseUsd(0)),
   };
 }
@@ -186,8 +190,8 @@ export function cleanReply(text: string, officialAddress: string | null): string
 // ---------------------------------------------------------------------------
 
 export type AskResult =
-  | { ok: true; reply: string; remainingToday: number }
-  | { ok: false; reason: "off" | "invalid" | "visitor-limit" | "resting" | "error"; message: string; remainingToday?: number };
+  | { ok: true; reply: string; remainingToday: number | null }
+  | { ok: false; reason: "off" | "invalid" | "visitor-limit" | "resting" | "error"; message: string; remainingToday?: number | null };
 
 export async function askMooBot(
   raw: unknown,
@@ -200,7 +204,8 @@ export async function askMooBot(
 
   const now = deps.now ?? Date.now();
   const day = utcDay(now);
-  const who = visitorId(ip, day);
+  // With no per-visitor limit, nothing about the visitor is kept at all.
+  const who = C.perVisitorPerDay === null ? null : visitorId(ip, day);
 
   const moobot = await getMooBot().catch(() => null);
   const official = moobot?.status === "verified" ? moobot.address : null;
@@ -209,20 +214,20 @@ export async function askMooBot(
 
   // Reserve the worst case before calling, so the daily cap holds even with several visitors at once.
   const ledger = await readLedger(day);
-  const used = ledger.visitors[who] ?? 0;
-  if (used >= C.perVisitorPerDay) {
+  const used = who === null ? 0 : (ledger.visitors[who] ?? 0);
+  if (leftAfter(used) === 0) {
     return { ok: false, reason: "visitor-limit", message: "That's all my questions for today. Come back after 00:00 UTC! 🐄", remainingToday: 0 };
   }
   if (overBudget(ledger.spentUsd, worst)) {
-    return { ok: false, reason: "resting", message: "MooBot is resting until 00:00 UTC. The Docs have every answer in the meantime.", remainingToday: C.perVisitorPerDay - used };
+    return { ok: false, reason: "resting", message: "MooBot is resting until 00:00 UTC. The Docs have every answer in the meantime.", remainingToday: leftAfter(used) };
   }
-  await kvSet(ledgerKey(day), { spentUsd: ledger.spentUsd + worst, visitors: { ...ledger.visitors, [who]: used + 1 } });
+  await kvSet(ledgerKey(day), { spentUsd: ledger.spentUsd + worst, visitors: who === null ? ledger.visitors : { ...ledger.visitors, [who]: used + 1 } });
 
   const settle = async (costUsd: number, countIt: boolean) => {
     try {
       const l = await readLedger(day);
       const visitors = { ...l.visitors };
-      if (!countIt) visitors[who] = Math.max(0, (visitors[who] ?? 1) - 1);
+      if (!countIt && who !== null) visitors[who] = Math.max(0, (visitors[who] ?? 1) - 1);
       await kvSet(ledgerKey(day), { spentUsd: Math.max(0, l.spentUsd - worst + costUsd), visitors });
     } catch (err) {
       reportError(err, { where: "chat ledger" });
@@ -232,7 +237,7 @@ export async function askMooBot(
   try {
     const r = await chatCompletion(messages, { model: C.model, maxTokens: C.maxTokens, temperature: C.temperature }, deps.fetch);
     await settle(actualUsd(r.inputTokens, r.outputTokens, worst), true);
-    return { ok: true, reply: cleanReply(r.text, official), remainingToday: C.perVisitorPerDay - used - 1 };
+    return { ok: true, reply: cleanReply(r.text, official), remainingToday: leftAfter(used + 1) };
   } catch (err) {
     // Orbio refused before answering (bad key, no balance, busy): nothing was spent, and it doesn't count.
     await settle(0, false);
@@ -242,7 +247,7 @@ export async function askMooBot(
       ok: false,
       reason: "error",
       message: busy ? "Lots of cows talking at once. Try again in a minute!" : "MooBot can't answer right now. Try again a bit later, or check the Docs.",
-      remainingToday: C.perVisitorPerDay - used,
+      remainingToday: leftAfter(used),
     };
   }
 }

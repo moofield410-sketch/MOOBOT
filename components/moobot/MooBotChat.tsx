@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { GATEWAY } from "@/config";
 
 type Turn = { role: "user" | "assistant"; content: string };
-type Usage = { enabled: boolean; remainingToday: number; resting: boolean };
-type Answer = { ok: true; reply: string; remainingToday: number } | { ok: false; reason: string; message: string; remainingToday?: number };
+/** remainingToday is null when there is no per-visitor limit. */
+type Usage = { enabled: boolean; remainingToday: number | null; resting: boolean };
+type Answer = { ok: true; reply: string; remainingToday: number | null } | { ok: false; reason: string; message: string; remainingToday?: number | null };
 
 /** The conversation lives in this browser tab only, so collapsing MooBot doesn't lose it. Never sent anywhere to be saved. */
 const STORAGE_KEY = "moobot-chat";
@@ -61,7 +62,7 @@ export function MooBotChat({ onThinking }: { onThinking?: (thinking: boolean) =>
 
   if (!usage?.enabled) return null;
 
-  const outOfQuestions = usage.remainingToday <= 0;
+  const outOfQuestions = usage.remainingToday !== null && usage.remainingToday <= 0;
   const blocked = usage.resting || outOfQuestions;
 
   const send = async () => {
@@ -85,7 +86,7 @@ export function MooBotChat({ onThinking }: { onThinking?: (thinking: boolean) =>
         setUsage({ ...usage, remainingToday: a.remainingToday });
       } else {
         setNotice(a.message);
-        setUsage({ ...usage, remainingToday: a.remainingToday ?? usage.remainingToday, resting: a.reason === "resting" });
+        setUsage({ ...usage, remainingToday: a.remainingToday === undefined ? usage.remainingToday : a.remainingToday, resting: a.reason === "resting" });
       }
     } catch {
       setNotice("MooBot can't answer right now. Try again a bit later.");
@@ -173,7 +174,7 @@ export function MooBotChat({ onThinking }: { onThinking?: (thinking: boolean) =>
       </form>
 
       <p className="mt-2 text-[11px] leading-snug text-fern">
-        {blocked ? "" : `${usage.remainingToday} question${usage.remainingToday === 1 ? "" : "s"} left today. `}
+        {blocked || usage.remainingToday === null ? "" : `${usage.remainingToday} question${usage.remainingToday === 1 ? "" : "s"} left today. `}
         Answers are written by AI and can be wrong. Not financial advice. Never share your seed phrase.
       </p>
     </section>

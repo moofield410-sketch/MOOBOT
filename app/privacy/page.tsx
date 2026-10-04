@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { GATEWAY } from "@/config";
 
 export const metadata: Metadata = { title: "Privacy" };
 
@@ -20,7 +21,11 @@ export default function PrivacyPage() {
         },
         {
           h: "Chatting with MooBot",
-          p: "When MooBot's chat is on and you ask him something, your question and the last few messages of the conversation are sent to Orbio's AI gateway to write the answer. Moofield doesn't save the conversation: it stays in your browser tab until you close it. To count the daily question limit, the site keeps a one-way code made from your IP address for that day only. It can't be turned back into your IP. Don't type personal details, and never share a seed phrase.",
+          p: `When MooBot's chat is on and you ask him something, your question and the last few messages of the conversation are sent to Orbio's AI gateway to write the answer. Moofield doesn't save the conversation: it stays in your browser tab until you close it.${
+            GATEWAY.chat.perVisitorPerDay === null
+              ? ""
+              : " To count the daily question limit, the site keeps a one-way code made from your IP address for that day only. It can't be turned back into your IP."
+          } Don't type personal details, and never share a seed phrase.`,
         },
         { h: "Questions", p: "Contact details will be listed here before launch." },
       ]}
