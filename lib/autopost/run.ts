@@ -43,6 +43,9 @@ export interface PostRecord {
   at: string;
   status: string;
   url: string | null;
+  /** What was posted, for the homepage feed (lib/feed.ts). Missing on posts sent before it was kept. */
+  text?: string;
+  image?: string | null;
 }
 
 interface Log {
@@ -218,7 +221,7 @@ export async function runAutoPost(opts: { now?: number; fetch?: GatewayFetch; so
           if (tries >= A.maxAttempts) log.posted[d.key] = { key: d.key, at: new Date(now).toISOString(), status: "gave up", url: null };
           continue;
         }
-        const rec: PostRecord = { key: d.key, at: new Date(now).toISOString(), status: r.status, url: r.url };
+        const rec: PostRecord = { key: d.key, at: new Date(now).toISOString(), status: r.status, url: r.url, text: d.text, image: d.media?.[0]?.url ?? null };
         log.posted[d.key] = rec;
         count.posts++;
         report.posted.push(rec);
@@ -272,4 +275,12 @@ export async function autoPostStatus(now = Date.now()): Promise<AutoPostStatus> 
     drafts: ((await kvGet<DraftRecord[]>(DRAFTS)) ?? []).slice(0, 6),
     postsToday: log.counts[utcDay(now)]?.posts ?? 0,
   };
+}
+
+/** The fixed posts that went out, with their text, newest first (for the homepage feed). */
+export async function publishedAutoPosts(): Promise<PostRecord[]> {
+  const log = (await kvGet<Log>(LOG)) ?? emptyLog();
+  return Object.values(log.posted)
+    .filter((p) => p.url && p.text)
+    .sort((a, b) => b.at.localeCompare(a.at));
 }
