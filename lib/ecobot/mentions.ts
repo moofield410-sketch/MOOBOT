@@ -4,7 +4,7 @@ import { learn, memoryBrief, readMemory, writeMemory } from "@/lib/ecobot/memory
 import { ecoBotMode } from "@/lib/ecobot/mode";
 import { extractJson, persona } from "@/lib/ecobot/persona";
 import { addSpend, freeLock, jobEnabled, K, noteJob, takeLock, type EcoDraft, type EcoPost } from "@/lib/ecobot/store";
-import { researchLoop, rewriteTurn, xPostsOf, type LoopOpts, type ToolCtx, type ToolDeps, type ToolName } from "@/lib/ecobot/tools";
+import { researchLoop, rewriteTurn, xPostsOf, xReadMaxCost, type LoopOpts, type ToolCtx, type ToolDeps, type ToolName } from "@/lib/ecobot/tools";
 import { utcDay } from "@/lib/field-fund-history";
 import { kvGet, kvSet } from "@/lib/kv";
 import { errorMessage, reportError } from "@/lib/monitoring";
@@ -112,7 +112,7 @@ export async function runMentions(opts: { now?: () => number; deps: Omit<ToolDep
   if (state.day !== day) state = { ...state, day, repliesToday: 0, byAuthor: {} };
 
   try {
-    const r = await callTool("social.x.posts", { mentions_of: OWN, limit: C.readLimit, max_cost: C.readMaxCost }, deps.fetch);
+    const r = await callTool("social.x.posts", { mentions_of: OWN, limit: C.readLimit, max_cost: xReadMaxCost({ limit: C.readLimit, authors: true, timeline: true }) }, deps.fetch);
     if (r.status !== "settled") {
       report.note = "the mentions read is still running";
       return report;

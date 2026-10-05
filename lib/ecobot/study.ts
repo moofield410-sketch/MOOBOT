@@ -3,7 +3,7 @@ import { learn, memoryBrief, readMemory, writeMemory } from "@/lib/ecobot/memory
 import { ecoBotMode } from "@/lib/ecobot/mode";
 import { extractJson, persona } from "@/lib/ecobot/persona";
 import { addSpend, freeLock, jobEnabled, K, noteJob, readLog, readSpend, takeLock } from "@/lib/ecobot/store";
-import { researchLoop, xPostsOf, type LoopOpts, type ToolCtx, type ToolDeps, type ToolName } from "@/lib/ecobot/tools";
+import { researchLoop, xPostsOf, xReadMaxCost, type LoopOpts, type ToolCtx, type ToolDeps, type ToolName } from "@/lib/ecobot/tools";
 import { utcDay } from "@/lib/field-fund-history";
 import { kvGet, kvSet } from "@/lib/kv";
 import { errorMessage, reportError } from "@/lib/monitoring";
@@ -74,7 +74,7 @@ async function performance(deps: ToolDeps): Promise<{ data: unknown; credit: num
   const mine = [...log.posts, ...log.replies].map((p) => ({ id: idOf(p.url), text: p.text, at: p.at, kind: p.signal.split(":")[0] })).filter((p) => p.id);
   const ids = mine.slice(0, 30).map((p) => p.id as string);
   if (!ids.length) return { data: "No published posts yet: review what you know and plan instead.", credit: 0 };
-  const r = await callTool("social.x.lookup", { ids, authors: false, max_cost: (ids.length * 0.0055 + 0.01).toFixed(4) }, deps.fetch);
+  const r = await callTool("social.x.lookup", { ids, authors: false, max_cost: xReadMaxCost({ limit: ids.length, authors: false, timeline: false }) }, deps.fetch);
   if (r.status !== "settled") return { data: "The lookup is still running.", credit: 0 };
   const stats = new Map(xPostsOf(r.result).map((p) => [p.id, p] as const));
   return {

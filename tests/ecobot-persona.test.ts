@@ -11,7 +11,7 @@ import { persona } from "@/lib/ecobot/persona";
 import type { EcoSources } from "@/lib/ecobot/run";
 import { addSpend, readLog } from "@/lib/ecobot/store";
 import { runStudy, topicFor } from "@/lib/ecobot/study";
-import { webResultsOf } from "@/lib/ecobot/tools";
+import { webResultsOf, xReadMaxCost } from "@/lib/ecobot/tools";
 import { kvClearMemory } from "@/lib/kv";
 import type { GatewayFetch } from "@/lib/orbio-gateway";
 import type { OrbioAgent } from "@/lib/sources/orbio-api";
@@ -294,6 +294,23 @@ describe("Jobs", () => {
   it("the route refuses an unknown job", async () => {
     const res = await cronEcobot(new Request("http://x/api/cron/ecobot?job=dance"));
     assert.equal(res.status, 400);
+  });
+
+  it("X read caps are never below Orbio's quote (it refuses those outright)", () => {
+    // Orbio refused the live mentions read: "quoted at 0.341000 CREDIT, above the max_cost of 0.330000".
+    assert.ok(Number(xReadMaxCost({ limit: ECOBOT.mentions.readLimit, authors: true, timeline: true })) >= 0.341);
+    // Its docs: a search of ten with authors is held at 0.165.
+    assert.ok(Number(xReadMaxCost({ limit: 10, authors: true, timeline: false, search: true })) >= 0.165);
+    // A 5-post timeline without authors: 5 posts and the account.
+    assert.ok(Number(xReadMaxCost({ limit: 5, authors: false, timeline: true })) >= 5 * 0.0055 + 0.011);
+  });
+
+  it("the mentions read asks for enough to be accepted", async () => {
+    env(ECOBOT.env, "preview");
+    const f = gateway([say({ reply: null, why: "-" })]);
+    await runMentions({ now: () => T0, deps: deps(f), ctx: ctx(), facts });
+    const read = calls.find((c) => c.url.endsWith("/tools/social.x.posts"))!;
+    assert.ok(Number(read.body.max_cost) >= 0.341, `max_cost ${read.body.max_cost}`);
   });
 
   it("web search results are read in either shape", () => {

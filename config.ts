@@ -254,14 +254,20 @@ export const ECOBOT = {
     "anthropic/claude-sonnet-5.5": { input: 0.000002, output: 0.00001 },
     "anthropic/claude-haiku-4.5": { input: 0.000001, output: 0.000005 },
   } as Record<string, { input: number; output: number }>,
+  /**
+   * What Orbio holds for an X read, in $CREDIT (its quotes, checked 2026-10-05): every post, plus
+   * every author when authors are included, plus the account a timeline is read from. A read's
+   * max_cost below its quote is refused outright, so caps are worked out from these (xReadMaxCost).
+   */
+  xPostCredit: 0.0055,
+  xAccountCredit: 0.011,
   /** Every job's run must fit the route's 60 seconds. */
   jobBudgetMs: 50_000,
   mentions: {
     /** Posts read per mentions poll (X sends at least 5; charged once per UTC day each). */
     readLimit: 20,
-    readMaxCost: "0.33",
     /** Mentions older than this are left alone. */
-    maxAgeH: 12,
+    maxAgeH: 24,
     perRun: 4,
     /** Below Orbio's 100 X replies a day, so the allowance is never the thing that stops it. */
     perDay: 80,
