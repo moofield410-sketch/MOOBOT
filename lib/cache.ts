@@ -1,4 +1,5 @@
 import { after } from "next/server.js";
+import { kvClearMemory, kvGet, kvMode, kvSet } from "@/lib/kv";
 import { errorMessage, reportError } from "@/lib/monitoring";
 import type { DataEnvelope, DataSourceKind } from "@/lib/types";
 
@@ -26,6 +27,23 @@ export interface CacheOptions {
    * agent list takes many seconds). For data where seconds matter (the Tournament board), leave it off.
    */
   background?: boolean;
+  /**
+   * Also keep the last good value in the shared store (Netlify Blobs), so a server instance that
+   * has just started (empty memory) reads it in a fraction of a second instead of reloading it
+   * from the source. Values must be plain JSON.
+   */
+  shared?: boolean;
+}
+
+const sharedKey = (key: string) => `cache:${key}`;
+
+/** Saves an entry for every instance; a failed save only costs the next instance a reload. */
+async function share(key: string, entry: Entry): Promise<void> {
+  try {
+    await kvSet(sharedKey(key), entry);
+  } catch (err) {
+    reportError(err, { cacheKey: key, shared: "write" });
+  }
 }
 
 /** Keys being reloaded in the background right now, so one slow reload isn't started twice. */
@@ -46,7 +64,15 @@ export async function cached<T>(
   loader: () => Promise<{ value: T; source: DataSourceKind }>,
 ): Promise<DataEnvelope<T>> {
   const now = opts.now ?? Date.now;
-  const hit = store.get(key);
+  let hit = store.get(key);
+  // A fresh instance: take the last good value another instance saved, if it isn't too old.
+  if (!hit && opts.shared) {
+    const saved = await kvGet<Entry>(sharedKey(key)).catch(() => null);
+    if (saved && typeof saved.fetchedAt === "number" && now() - saved.fetchedAt < opts.staleMs) {
+      store.set(key, saved);
+      hit = saved;
+    }
+  }
 
   if (hit && now() - hit.fetchedAt < opts.ttlMs) {
     return envelope<T>(hit, now(), opts.staleMs);
@@ -58,7 +84,9 @@ export async function cached<T>(
       later(async () => {
         try {
           const { value, source } = await loader();
-          store.set(key, { value, source, fetchedAt: now() });
+          const entry: Entry = { value, source, fetchedAt: now() };
+          store.set(key, entry);
+          if (opts.shared) await share(key, entry);
         } catch (err) {
           reportError(err, { cacheKey: key, background: true });
         } finally {
@@ -73,6 +101,7 @@ export async function cached<T>(
     const { value, source } = await loader();
     const entry: Entry = { value, source, fetchedAt: now() };
     store.set(key, entry);
+    if (opts.shared) await share(key, entry);
     return envelope<T>(entry, now(), opts.staleMs);
   } catch (err) {
     reportError(err, { cacheKey: key });
@@ -99,6 +128,15 @@ export function invalidate(key: string): void {
   store.delete(key);
 }
 
+/** Forgets this instance's memory only (like a freshly started server); shared copies stay. For tests. */
+export function clearLocalCache(): void {
+  store.clear();
+  reloading.clear();
+}
+
 export function clearCache(): void {
   store.clear();
+  reloading.clear();
+  // Tests and local runs: the shared copies live in KV memory there, and must go too.
+  if (kvMode() === "memory") kvClearMemory();
 }

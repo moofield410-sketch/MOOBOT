@@ -76,9 +76,16 @@ const FAQ: FaqItem[] = [
 ];
 
 export default async function HomePage() {
-  const [masters, credits, moobot, orbioTotals] = await Promise.all([getMasters(), getCredits(), getMooBot(), getOrbioTotals()]);
-  const [pitches, leaderboard] = await Promise.all([getPitches(), getLeaderboard()]);
-  const market = await getCreditMarket();
+  // Everything at once: each source answers on its own time, none waits for another.
+  const [masters, credits, moobot, orbioTotals, pitches, leaderboard, market] = await Promise.all([
+    getMasters(),
+    getCredits(),
+    getMooBot(),
+    getOrbioTotals(),
+    getPitches(),
+    getLeaderboard(),
+    getCreditMarket(),
+  ]);
 
   const all = masters.data ?? [];
   const featured = [...all].sort((a, b) => Number(b.openToPitches) - Number(a.openToPitches)).slice(0, 12);

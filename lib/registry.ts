@@ -21,7 +21,7 @@ function withProfile(m: Master): Master {
  * with the last good list kept and flagged stale if Orbio is unreachable).
  */
 export async function getMasters(): Promise<DataEnvelope<Master[]>> {
-  return cached("masters", { ttlMs: CACHE.mastersTtlMs, staleMs: CACHE.mastersStaleMs, background: true }, async () => {
+  return cached("masters", { ttlMs: CACHE.mastersTtlMs, staleMs: CACHE.mastersStaleMs, background: true, shared: true }, async () => {
     if (USE_MOCK_DATA) {
       await scanIfDue(mockReader);
       const masters = [...indexerState().masters.values()]

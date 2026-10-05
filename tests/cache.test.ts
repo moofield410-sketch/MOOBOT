@@ -70,3 +70,29 @@ describe("background reload (stale-while-revalidate)", () => {
     assert.equal((await cached(key, { ttlMs: 10, staleMs: 1_000, now: () => now, background: true }, slow)).data, 2, "the reloaded value");
   });
 });
+
+describe("shared copy (a freshly started server)", () => {
+  it("reads the last good value another instance saved, without calling the slow source", async () => {
+    const { cached, clearCache, clearLocalCache } = await import("@/lib/cache");
+    clearCache();
+    let calls = 0;
+    const load = async () => ({ value: { masters: ++calls }, source: "orbio" as const });
+    const opts = { ttlMs: 60_000, staleMs: 600_000, shared: true, background: true, now: () => 1_000 };
+    await cached("masters-test", opts, load);
+    clearLocalCache(); // a new instance: empty memory, same shared store
+    const r = await cached("masters-test", { ...opts, now: () => 2_000 }, load);
+    assert.deepEqual(r.data, { masters: 1 });
+    assert.equal(calls, 1, "the slow source wasn't called again");
+  });
+
+  it("ignores a shared copy that is too old", async () => {
+    const { cached, clearCache, clearLocalCache } = await import("@/lib/cache");
+    clearCache();
+    let calls = 0;
+    const load = async () => ({ value: ++calls, source: "orbio" as const });
+    await cached("old-test", { ttlMs: 10, staleMs: 100, shared: true, now: () => 0 }, load);
+    clearLocalCache();
+    const r = await cached("old-test", { ttlMs: 10, staleMs: 100, shared: true, now: () => 1_000 }, load);
+    assert.equal(r.data, 2);
+  });
+});

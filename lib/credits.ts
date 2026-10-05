@@ -41,7 +41,7 @@ export async function recordFieldFund(): Promise<"recorded" | "not-launched"> {
 }
 
 export async function getCredits(): Promise<DataEnvelope<CreditStats>> {
-  return cached<CreditStats | null>("credits", { ttlMs: CACHE.creditsTtlMs, staleMs: CACHE.creditsStaleMs, background: true }, async () => {
+  return cached<CreditStats | null>("credits", { ttlMs: CACHE.creditsTtlMs, staleMs: CACHE.creditsStaleMs, background: true, shared: true }, async () => {
     const received = await receivedAtoms();
     if (!received) return { value: null, source: "unavailable" };
     const split = splitReceived(received.value);
