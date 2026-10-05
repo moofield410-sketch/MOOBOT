@@ -41,3 +41,32 @@ describe("cache with last-known-good fallback", () => {
     assert.equal((await cached("s", opts, async () => ({ value: 2, source: "mock" }))).stale, true);
   });
 });
+
+describe("background reload (stale-while-revalidate)", () => {
+  it("serves the old value at once after its refresh time and reloads it behind", async () => {
+    const { cached } = await import("@/lib/cache");
+    let now = 0;
+    let loads = 0;
+    let release!: () => void;
+    const slow = () =>
+      new Promise<{ value: number; source: "orbio" }>((r) => {
+        loads++;
+        release = () => r({ value: loads, source: "orbio" });
+      });
+    const key = `bg:${Math.random()}`;
+    const first = cached(key, { ttlMs: 10, staleMs: 1_000, now: () => now, background: true }, slow);
+    release();
+    assert.equal((await first).data, 1);
+    now = 50;
+    const t0 = Date.now();
+    const served = await cached(key, { ttlMs: 10, staleMs: 1_000, now: () => now, background: true }, slow);
+    assert.equal(served.data, 1, "the old value, without waiting");
+    assert.ok(Date.now() - t0 < 50);
+    // A second visitor while it reloads doesn't start another reload.
+    await cached(key, { ttlMs: 10, staleMs: 1_000, now: () => now, background: true }, slow);
+    assert.equal(loads, 2);
+    release();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal((await cached(key, { ttlMs: 10, staleMs: 1_000, now: () => now, background: true }, slow)).data, 2, "the reloaded value");
+  });
+});

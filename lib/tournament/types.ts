@@ -137,5 +137,13 @@ export interface FinalRound {
   fromDevAtoms: string;
   /** Everything the rewards calculator used, so every wallet's share can be recomputed exactly. */
   input: Omit<import("@/lib/rewards").RoundInput, "pool"> & { pool: string };
+  /** Every share (atoms as strings), computed when frozen: what the dev pays, whatever the rules become later. */
+  payouts: FrozenPayouts;
   result: import("@/lib/types").PastRound;
+}
+
+export interface FrozenPayouts {
+  pitches: { pitchId: string; amount: string }[];
+  voters: { wallet: string; amount: string }[];
+  masters: { masterId: string; amount: string }[];
 }

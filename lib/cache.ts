@@ -1,3 +1,4 @@
+import { after } from "next/server.js";
 import { errorMessage, reportError } from "@/lib/monitoring";
 import type { DataEnvelope, DataSourceKind } from "@/lib/types";
 
@@ -19,6 +20,24 @@ export interface CacheOptions {
   ttlMs: number;
   staleMs: number;
   now?: () => number;
+  /**
+   * Stale-while-revalidate: once the value is older than ttlMs (but not yet staleMs), serve it at
+   * once and reload it in the background, so no visitor waits on a slow source (Orbio's full
+   * agent list takes many seconds). For data where seconds matter (the Tournament board), leave it off.
+   */
+  background?: boolean;
+}
+
+/** Keys being reloaded in the background right now, so one slow reload isn't started twice. */
+const reloading = new Set<string>();
+
+/** Runs `work` after the response is sent when inside a request; anywhere else, just starts it. */
+function later(work: () => Promise<void>): void {
+  try {
+    after(work);
+  } catch {
+    void work();
+  }
 }
 
 export async function cached<T>(
@@ -30,6 +49,23 @@ export async function cached<T>(
   const hit = store.get(key);
 
   if (hit && now() - hit.fetchedAt < opts.ttlMs) {
+    return envelope<T>(hit, now(), opts.staleMs);
+  }
+
+  if (opts.background && hit && now() - hit.fetchedAt < opts.staleMs) {
+    if (!reloading.has(key)) {
+      reloading.add(key);
+      later(async () => {
+        try {
+          const { value, source } = await loader();
+          store.set(key, { value, source, fetchedAt: now() });
+        } catch (err) {
+          reportError(err, { cacheKey: key, background: true });
+        } finally {
+          reloading.delete(key);
+        }
+      });
+    }
     return envelope<T>(hit, now(), opts.staleMs);
   }
 

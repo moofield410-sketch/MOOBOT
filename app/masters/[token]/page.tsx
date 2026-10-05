@@ -14,6 +14,7 @@ import { StatTile } from "@/components/ui/Stats";
 import { explorerLink, formatCompact, formatDate, formatUpdated, formatUsd } from "@/lib/format";
 import { getMaster } from "@/lib/registry";
 import { getPitches, getTenders } from "@/lib/tournament";
+import { tournamentOpenNow } from "@/lib/timeline.server";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +98,7 @@ export default async function MasterProfilePage({ params }: Props) {
           <h2 id="pitches-heading" className="mb-5 text-xl font-bold text-soil">
             Pitches to {m.name}
           </h2>
-          <LockGate feature="registrationOpen" title="The Tournament opens in" minHeight="16rem">
+          <LockGate feature="registrationOpen" title="The Tournament opens in" minHeight="16rem" initiallyUnlocked={tournamentOpenNow()}>
             {pitches.length > 0 ? (
               <ul className={`grid gap-5 ${pitches.length > 1 ? "md:grid-cols-2" : "max-w-md"}`}>
                 {pitches.map((p) => (

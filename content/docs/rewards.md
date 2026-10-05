@@ -2,7 +2,7 @@
 
 The Tournament is funded by the **$CREDIT token** of Orbio ([@orbiodotso](https://x.com/orbiodotso)) that the **MooBot agent** receives on Orbio. Orbio describes one $CREDIT as one dollar of AI usage balance. This page explains the policy for where those credits go.
 
-> **Every scored round pays at least {{POOL_FLOOR}}.** Each round's pool is {{POOL_PCT}}% of the treasury; when that is less than {{POOL_FLOOR}}, the dev adds the difference. Winners are **paid by the team after each round**: when a round ends its result and every share are frozen and shown on the site, then the dev sends the $CREDIT by hand. The site itself never sends anything and never asks for an approval.
+> **Every round's pool is at least {{POOL_FLOOR}}.** Each round's pool is {{POOL_PCT}}% of the treasury; when that is less than {{POOL_FLOOR}}, the dev adds the difference. The whole pool is for the players; a share nobody qualifies for (say, no Master took part) rolls over to the next round. Winners are **paid by the team after each round**: when a round ends its result and every share are frozen and shown on the site, then the dev sends the $CREDIT by hand. The site itself never sends anything and never asks for an approval.
 
 [[Opens]] Rounds are scored by the site's rewards calculator when they end, and the result is frozen then: later changes to the treasury, the Masters list or these rules never change a finished round. The rules below are fixed in that calculator and in config.
 

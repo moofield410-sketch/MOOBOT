@@ -1,7 +1,7 @@
 import { TOURNAMENT } from "@/config";
 import { computeRoundPayouts, rankRoundPitches, type RoundInput, type RoundMaster } from "@/lib/rewards";
 import { visiblePitches } from "@/lib/tournament/rules";
-import type { RoundDoc, StoredPitch, StoredTender } from "@/lib/tournament/types";
+import type { FrozenPayouts, RoundDoc, StoredPitch, StoredTender } from "@/lib/tournament/types";
 import type { Address, PastRound, Pitch, PitchStatus, Tender, VoterRank } from "@/lib/types";
 
 /**
@@ -152,10 +152,19 @@ export interface LedgerEntry {
 }
 
 /** One wallet's entries for a finished round. With no pool, entries still list what the wallet did. */
-export function ledgerFor(wallet: Address, doc: RoundDoc, input: RoundInput | null, masterOwners: Map<string, string>): LedgerEntry[] {
+export function ledgerFor(wallet: Address, doc: RoundDoc, input: RoundInput | null, masterOwners: Map<string, string>, frozen: FrozenPayouts | null = null): LedgerEntry[] {
   const w = wallet.toLowerCase();
   const entries: LedgerEntry[] = [];
-  const payouts = input ? computeRoundPayouts(input) : null;
+  // A frozen round's shares are read as stored; only an unfrozen one is computed.
+  const payouts = frozen
+    ? {
+        pitches: frozen.pitches.map((x) => ({ pitchId: x.pitchId, amount: BigInt(x.amount) })),
+        voters: frozen.voters.map((x) => ({ wallet: x.wallet, amount: BigInt(x.amount) })),
+        masters: frozen.masters.map((x) => ({ masterId: x.masterId, amount: BigInt(x.amount) })),
+      }
+    : input
+      ? computeRoundPayouts(input)
+      : null;
   const titles = new Map(doc.pitches.map((p) => [p.id, p.title]));
 
   for (const p of visiblePitches(doc).filter((p) => p.fighterOwner.toLowerCase() === w)) {

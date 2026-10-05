@@ -8,6 +8,7 @@ import { FULL_UNLOCK_AFTER_H, USE_MOCK_DATA, VOTING } from "@/config";
 import { formatCompact, formatInt, shortAddress } from "@/lib/format";
 import { getMasters } from "@/lib/registry";
 import { getLeaderboard } from "@/lib/tournament";
+import { tournamentOpenNow } from "@/lib/timeline.server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Leaderboard" };
@@ -49,6 +50,7 @@ export default async function LeaderboardPage() {
       />
 
       <LockGate
+        initiallyUnlocked={tournamentOpenNow()}
         feature="votingOpen"
         title="The leaderboard opens in"
         description={`The leaderboard unlocks ${FULL_UNLOCK_AFTER_H} hours after go-live, and fills as the Crowd votes.${USE_MOCK_DATA ? " Here's a preview of how it will look." : ""}`}

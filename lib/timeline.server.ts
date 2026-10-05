@@ -33,3 +33,8 @@ export function serverTimeline(): Timeline {
 
   return buildTimeline(agentLiveAt, FULL_UNLOCK_AFTER_H, hourMs);
 }
+
+/** Whether the Tournament is open right now on the server clock (for LockGate's first render). */
+export function tournamentOpenNow(now = Date.now()): boolean {
+  return now >= serverTimeline().fullUnlockAt;
+}

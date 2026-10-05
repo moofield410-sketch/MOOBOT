@@ -339,7 +339,7 @@ describe("Auto-post runs", () => {
     const UNLOCK = Date.parse("2026-10-05T12:00:00Z");
     const LEN = 72 * 3_600_000;
     const round = (n: number, now: number) => ({ status: "live" as const, number: n, startsAt: UNLOCK + (n - 1) * LEN, endsAt: UNLOCK + n * LEN, countdownTo: UNLOCK + n * LEN, msRemaining: UNLOCK + n * LEN - now });
-    const r1 = { id: "r1", number: 1, startedAt: new Date(UNLOCK).toISOString(), endedAt: new Date(UNLOCK + LEN).toISOString(), snapshotBlock: "1", eligibleWallets: null, votesCast: 9, winnerPitchId: "r1-5", winnerTitle: "Daily digest", winnerFighter: "Bot", poolCredits: null };
+    const r1 = { id: "r1", number: 1, startedAt: new Date(UNLOCK).toISOString(), endedAt: new Date(UNLOCK + LEN).toISOString(), snapshotBlock: "1", eligibleWallets: null, votesCast: 9, winnerPitchId: "r1-5", winnerTitle: "Daily digest", winnerFighter: "Bot", poolCredits: 100, funding: { allocatedCredits: 100, fromTreasuryCredits: 60, fromDevCredits: 40 } };
     const at = (now: number, n: number, past: PastRound[] = []) => dueDrafts(now, { ...sources(), tournament: async () => ({ round: round(n, now), past }) });
     const keys = async (now: number, n: number, past?: PastRound[]) => (await at(now, n, past)).drafts.map((d) => d.key).filter((k) => k.startsWith("round"));
     assert.deepEqual(await keys(UNLOCK + 60_000, 1), ["round-open:1"]);

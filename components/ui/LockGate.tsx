@@ -2,9 +2,9 @@
 
 import { useSchedule } from "@/components/ScheduleProvider";
 import { LockIcon } from "@/components/ui/Icons";
-import { AGENT_LIVE_AT, FULL_UNLOCK_AFTER_H, USE_MOCK_DATA } from "@/config";
+import { USE_MOCK_DATA } from "@/config";
 import { formatHms, formatUtcDateTime } from "@/lib/format";
-import { buildTimeline, type Features, type Timeline } from "@/lib/schedule";
+import type { Features, Timeline } from "@/lib/schedule";
 
 type GateFeature = Extract<keyof Features, "registrationOpen" | "votingOpen" | "rewardsLedgerOpen">;
 
@@ -14,11 +14,6 @@ const UNLOCK_AT: Record<GateFeature, keyof Timeline> = {
   votingOpen: "fullUnlockAt",
   rewardsLedgerOpen: "fullUnlockAt",
 };
-
-/** The published schedule, used only until the server clock has answered. */
-const PUBLISHED = buildTimeline(Date.parse(AGENT_LIVE_AT), FULL_UNLOCK_AFTER_H);
-/** Before the sync, only well past the unlock counts as open, so a slightly wrong clock can't open it early. */
-const PRE_SYNC_MARGIN_MS = 60_000;
 
 /**
  * Shows children once `feature` is unlocked by the server-clock schedule.
@@ -32,6 +27,7 @@ export function LockGate({
   description,
   children,
   minHeight = "18rem",
+  initiallyUnlocked = false,
 }: {
   feature: GateFeature;
   /** Countdown prefix, for example "The Tournament opens in". */
@@ -39,11 +35,17 @@ export function LockGate({
   description?: string;
   children: React.ReactNode;
   minHeight?: string;
+  /**
+   * Whether the server found it open when it rendered the page. Used until the clock sync answers,
+   * so the content is in the page's HTML once open; the server and the browser's first render
+   * agree on it, so React never has to throw the page away.
+   */
+  initiallyUnlocked?: boolean;
 }) {
   const { synced, schedule, timeline, now, error } = useSchedule();
   // Once open, the content is in the page from the first render (and the server's HTML), instead
   // of waiting for the clock sync; before the unlock, the synced server clock decides.
-  const unlocked = synced ? schedule?.features[feature] : Date.now() >= PUBLISHED[UNLOCK_AT[feature]] + PRE_SYNC_MARGIN_MS;
+  const unlocked = synced ? schedule?.features[feature] : initiallyUnlocked;
   if (unlocked) return <>{children}</>;
 
   const unlockAt = timeline ? timeline[UNLOCK_AT[feature]] : null;

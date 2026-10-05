@@ -1,7 +1,7 @@
 import { verifyMessage, type Hex } from "viem";
 import { AUTH } from "@/config";
 import { parseSignInMessage } from "@/lib/auth/message";
-import { consumeNonce } from "@/lib/auth/nonces";
+import { checkNonce, consumeNonce } from "@/lib/auth/nonces";
 import { publicClientOrNull } from "@/lib/sources/chain";
 import type { Address } from "@/lib/types";
 
@@ -17,7 +17,11 @@ export async function verifySignIn(message: string, signature: string, now = Dat
   if (!fields) return { ok: false, reason: "Message is not a valid Moofield sign-in" };
   if (!/^0x[0-9a-fA-F]+$/.test(signature)) return { ok: false, reason: "Invalid signature format" };
 
-  // The signature first, then the nonce: a wrong signature must not write anything to storage.
+  // Cheapest first: the nonce's own proof and age (no storage, no chain), then the signature
+  // (which may need a chain read for smart wallets), and only then is the nonce used up, so a
+  // wrong signature never writes anything.
+  const pre = checkNonce(fields.nonce, fields.address, fields.issuedAt, now);
+  if (!pre.ok) return pre;
   const client = publicClientOrNull();
   const valid = client
     ? await client.verifyMessage({ address: fields.address, message, signature: signature as Hex })

@@ -8,7 +8,7 @@ import type { DataEnvelope } from "@/lib/types";
  * (no key, no credits). SERVER-SIDE ONLY. Works before $MOOBOT launches; cached for everyone.
  */
 export function getOrbioTotals(fetcher: Fetcher = defaultFetcher, now?: () => number): Promise<DataEnvelope<OrbioTotals>> {
-  return cached<OrbioTotals>("orbio:analytics", { ttlMs: ORBIO_API.analyticsTtlMs, staleMs: ORBIO_API.analyticsStaleMs, now }, async () => ({
+  return cached<OrbioTotals>("orbio:analytics", { ttlMs: ORBIO_API.analyticsTtlMs, staleMs: ORBIO_API.analyticsStaleMs, now, background: true }, async () => ({
     value: await fetchAnalytics(fetcher),
     source: "orbio",
   }));

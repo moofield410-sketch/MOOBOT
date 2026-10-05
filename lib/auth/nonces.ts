@@ -23,8 +23,8 @@ export function issueNonce(address: Address, now = Date.now()): { nonce: string;
 
 export type NonceResult = { ok: true } | { ok: false; reason: string };
 
-/** Consumes a nonce. It can only ever be used once, by the address it was issued to, within the TTL. */
-export async function consumeNonce(nonce: string, address: Address, issuedAt: string, now = Date.now()): Promise<NonceResult> {
+/** Checks a nonce without using it up: its proof, its address and its age. Costs nothing (no storage, no chain). */
+export function checkNonce(nonce: string, address: Address, issuedAt: string, now = Date.now()): NonceResult {
   const secret = sessionSecret();
   if (!secret) return { ok: false, reason: "Sign-in is not configured yet" };
   const [rand, given] = nonce.split(".");
@@ -36,6 +36,14 @@ export async function consumeNonce(nonce: string, address: Address, issuedAt: st
     return { ok: false, reason: "Sign-in request was issued to a different address or time" };
   }
   if (now - at > AUTH.nonceTtlMs || at - now > 60_000) return { ok: false, reason: "Sign-in request expired" };
+  return { ok: true };
+}
+
+/** Consumes a nonce. It can only ever be used once, by the address it was issued to, within the TTL. */
+export async function consumeNonce(nonce: string, address: Address, issuedAt: string, now = Date.now()): Promise<NonceResult> {
+  const checked = checkNonce(nonce, address, issuedAt, now);
+  if (!checked.ok) return checked;
+  const rand = nonce.split(".")[0];
   const fresh = await kvSetIf(`auth:nonce:${rand}`, { usedAt: now }, null);
   return fresh ? { ok: true } : { ok: false, reason: "This sign-in request was already used" };
 }

@@ -145,7 +145,8 @@ export async function dueDrafts(now: number, src: AutoPostSources = realSources)
   if (t?.round.status === "live") {
     const last = t.past.find((r) => r.number === t.round.number - 1);
     if (t.round.number === 1 && now - t.round.startsAt < ROUND_POST_WINDOW_MS) drafts.push(tournamentOpenDraft(t.round));
-    if (last && now - Date.parse(last.endedAt) < ROUND_POST_WINDOW_MS) drafts.push(roundResultDraft(last, t.round));
+    // Only once the round is frozen (a couple of minutes after it ends), so the post names the final result.
+    if (last?.funding && now - Date.parse(last.endedAt) < ROUND_POST_WINDOW_MS) drafts.push(roundResultDraft(last, t.round));
   }
   if (minutes >= A.boardAfterMinutes) drafts.push(boardDraft(day, siteUrl()));
   if (!ecoBot && minutes >= A.recapHourUtc * 60) {

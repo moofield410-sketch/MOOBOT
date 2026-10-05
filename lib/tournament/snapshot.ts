@@ -78,15 +78,19 @@ async function transferSumChunked(chain: SnapshotChain, token: Address, owner: A
   let span = whole;
   let start = from;
   let refusals = 0;
+  /** The smallest range the node has refused: growing back stops below it, so refusals don't repeat. */
+  let ceiling = whole + 1n;
   while (start <= to) {
     const end = start + span - 1n > to ? to : start + span - 1n;
     try {
       total += await chain.transferSum(token, owner, dir, start, end);
       start = end + 1n;
       refusals = 0;
-      span = span * 2n > whole ? whole : span * 2n;
+      const grown = span * 2n > whole ? whole : span * 2n;
+      span = grown < ceiling ? grown : span;
     } catch (err) {
       if (span <= 500n || ++refusals > 12) throw err;
+      if (span < ceiling) ceiling = span;
       span /= 2n;
     }
   }

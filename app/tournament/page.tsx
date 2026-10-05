@@ -18,6 +18,7 @@ import { getMasters } from "@/lib/registry";
 import { currentRound } from "@/lib/rounds";
 import { serverTimeline } from "@/lib/timeline.server";
 import { getTournamentState } from "@/lib/tournament";
+import { tournamentOpenNow } from "@/lib/timeline.server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Tournament" };
@@ -167,6 +168,7 @@ export default async function TournamentPage() {
       <RoundCountdown hideWhileUpcoming />
 
       <LockGate
+        initiallyUnlocked={tournamentOpenNow()}
         feature="registrationOpen"
         title="The Tournament opens in"
         description={`The Tournament board unlocks ${FULL_UNLOCK_AFTER_H} hours after go-live. Pitching and voting open with it.${USE_MOCK_DATA ? " Here's a preview of the board." : ""}`}

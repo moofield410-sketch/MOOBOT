@@ -46,7 +46,7 @@ export async function GET(req: Request) {
   const live = round.status === "live";
   // A first power read costs chain reads; a known one costs nothing. Fresh reads are limited per
   // connection (a voter needs one or two), unless the wallet is signed in as itself.
-  const fresh = live && !(await powerKnown(round.number, address));
+  const fresh = live && !(await powerKnown(round.number, address).catch(() => false));
   const tooMany = fresh && !same(session, address) && !allow(`power:${clientIp(req)}`, FRESH_POWER_READS, FRESH_POWER_WINDOW_MS);
   const [doc, power, agents, masters, entries] = await Promise.all([
     live ? readRound(round.number) : Promise.resolve(null),

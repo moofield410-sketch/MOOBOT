@@ -24,7 +24,7 @@ export async function botFacts(now: number): Promise<string[]> {
     if (received !== null) facts.push(`CREDIT received by the ${SITE.ticker} agent so far (the Field Fund): ${formatCredits(received)}.`);
   }
   facts.push(
-    `Tournament rewards: each round's pool is ${REWARDS.roundPoolPctOfTreasury}% of the treasury (the rest rolls over), and the dev tops it up so every scored round pays at least ${REWARDS.roundPoolFloorCredits} CREDIT. The whole pool goes to the top ${REWARDS.pitchPlaces.length} pitches, the voters and the Masters who took part. The team pays the winners by hand after each round; the result is frozen when the round ends. A round needs at least ${REWARDS.minVoters} voters to pay out.`,
+    `Tournament rewards: each round's pool is ${REWARDS.roundPoolPctOfTreasury}% of the treasury (the rest rolls over), and the dev tops it up so every round's pool is at least ${REWARDS.roundPoolFloorCredits} CREDIT (a share nobody qualifies for, like an empty Masters' share, rolls over). The whole pool goes to the top ${REWARDS.pitchPlaces.length} pitches, the voters and the Masters who took part. The team pays the winners by hand after each round; the result is frozen when the round ends. A round needs at least ${REWARDS.minVoters} voters to pay out.`,
   );
   const spend = await readSpend(utcDay(now)).catch(() => null);
   if (spend) {

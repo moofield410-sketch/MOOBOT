@@ -135,7 +135,12 @@ describe("$MOOBOT launch switch", () => {
     clearCache();
     let now = 0;
     assert.equal((await getMooBot(orbio, () => now)).status, "verified");
+    // Past its refresh time it's served at once while it reloads in the background...
     now = MOOBOT_TOKEN.verifyTtlMs + 1;
+    const served = await getMooBot(down, () => now);
+    assert.equal(served.status, "verified");
+    // ...and once it's old and Orbio still can't be reached, it's kept but flagged stale.
+    now = MOOBOT_TOKEN.verifyStaleMs + 1;
     const kept = await getMooBot(down, () => now);
     assert.equal(kept.status, "verified");
     assert.equal(kept.status === "verified" && kept.stale, true);

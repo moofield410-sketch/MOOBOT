@@ -36,6 +36,7 @@ import { getOrbioTotals } from "@/lib/orbio-totals";
 import { getMasters } from "@/lib/registry";
 import { masterOfTheDay } from "@/lib/spotlight";
 import { getLeaderboard, getPitches } from "@/lib/tournament";
+import { tournamentOpenNow } from "@/lib/timeline.server";
 
 export const dynamic = "force-dynamic";
 
@@ -276,7 +277,7 @@ export default async function HomePage() {
           }
           className="h-full"
         >
-          <LockGate feature="registrationOpen" title="The Tournament opens in" minHeight="16rem">
+          <LockGate feature="registrationOpen" title="The Tournament opens in" minHeight="16rem" initiallyUnlocked={tournamentOpenNow()}>
             {topPitches.length > 0 ? (
               <ol className="space-y-3">
                 {topPitches.map((p) => (

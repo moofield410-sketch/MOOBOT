@@ -107,7 +107,7 @@ export async function getMooBot(fetcher: Fetcher = defaultFetcher, now?: () => n
 
   const env = await cached<MooBotAgent | "not-found">(
     `moobot:${address}`,
-    { ttlMs: MOOBOT_TOKEN.verifyTtlMs, staleMs: MOOBOT_TOKEN.verifyStaleMs, now },
+    { ttlMs: MOOBOT_TOKEN.verifyTtlMs, staleMs: MOOBOT_TOKEN.verifyStaleMs, now, background: true },
     async () => {
       const agent = await fetchAgentByToken(address.toLowerCase() as Address, fetcher);
       if (!agent) reportError(new Error("$MOOBOT token not found on Orbio: $MOOBOT features stay off"), { address });
@@ -134,7 +134,7 @@ export async function getMooBotChart(range: ChartRange, fetcher: Fetcher = defau
   if (m.status !== "verified") return { status: "off" };
   const env = await cached<PriceChart>(
     `moobot-chart:${m.address}:${range}`,
-    { ttlMs: ORBIO_API.chartTtlMs, staleMs: ORBIO_API.chartStaleMs, now },
+    { ttlMs: ORBIO_API.chartTtlMs, staleMs: ORBIO_API.chartStaleMs, now, background: true },
     async () => ({ value: await fetchAgentChart(m.address.toLowerCase() as Address, range, fetcher), source: "orbio" }),
   );
   if (env.data === null) return { status: "unavailable", range };

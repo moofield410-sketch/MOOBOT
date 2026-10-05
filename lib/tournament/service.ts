@@ -309,7 +309,8 @@ export async function postTender(deps: TournamentDeps, message: unknown, signatu
   return updateTenders((doc) => {
     stillOpen(deps, round);
     // A signature is public once posted (the audit log): the same signed tender can't be posted twice.
-    if (doc.tenders.some((x) => x.signature.toLowerCase() === sig.toLowerCase())) refuse("This tender is already posted.", 409);
+    // Compared by the signed text, not the signature: the same message can be signed in more than one valid encoding.
+    if (doc.tenders.some((x) => x.message === msg)) refuse("This tender is already posted.", 409);
     const tender: StoredTender = {
       id: nextTenderId(doc, round.number, { agentId: m.orbioAgentId, token: m.tokenAddress }),
       round: round.number,
@@ -376,6 +377,9 @@ async function grossTreasury(): Promise<bigint | null> {
 
 const asCredits = (atoms: bigint) => Number(atoms) / 10 ** CREDIT_DECIMALS;
 
+/** A round is frozen this long after it ends, so every write that passed its last-second check has landed. */
+export const FREEZE_AFTER_MS = 2 * 60_000;
+
 /** The frozen records in order, and what the treasury has paid out so far. */
 export interface FinalsView {
   past: PastRound[];
@@ -408,8 +412,9 @@ export async function pastRounds(deps: TournamentDeps = defaultDeps): Promise<Fi
       paid += BigInt(kept.fromTreasuryAtoms);
       continue;
     }
-    // A later round can't be frozen before an earlier one.
-    if (finals.some((f) => f === null)) {
+    // A later round can't be frozen before an earlier one, and none is frozen in its first
+    // minutes: a vote that passed its last-second check may still be on its way into storage.
+    if (finals.some((f) => f === null) || deps.now() < v.times.endsAt + FREEZE_AFTER_MS) {
       finals.push(null);
       continue;
     }
@@ -419,7 +424,12 @@ export async function pastRounds(deps: TournamentDeps = defaultDeps): Promise<Fi
       continue;
     }
     tenders ??= (await readTenders()).tenders;
-    masters ??= await deps.masters().catch(() => [] as Master[]);
+    // Without the Masters list a round would freeze with no Masters' shares: wait and retry instead.
+    masters ??= await deps.masters().catch(() => null);
+    if (masters === null) {
+      finals.push(null);
+      continue;
+    }
     const treasury = gross > paid ? gross - paid : 0n;
     const plan = roundPool(treasury);
     const recentTop3 = finals
@@ -427,7 +437,8 @@ export async function pastRounds(deps: TournamentDeps = defaultDeps): Promise<Fi
       .flatMap((f) => (f.result.top ?? []).map((x) => x.id.replace(/^r\d+-/, "")));
     const roundMasters: RoundMaster[] = masters.map((m) => ({ id: m.tokenAddress, agentId: m.orbioAgentId ?? "", ownerWallet: m.ownerWallet }));
     const input = roundInput(v.doc, plan.pool, tenders, roundMasters, recentTop3);
-    const allocated = totalAllocated(computeRoundPayouts(input));
+    const payouts = computeRoundPayouts(input);
+    const allocated = totalAllocated(payouts);
     const funding = fundingOf(plan, allocated);
     const result = pastRoundOf(v.doc, v.times, asCredits(plan.pool));
     const final: FinalRound = {
@@ -441,6 +452,12 @@ export async function pastRounds(deps: TournamentDeps = defaultDeps): Promise<Fi
       fromTreasuryAtoms: funding.fromTreasury.toString(),
       fromDevAtoms: funding.fromDev.toString(),
       input: { ...input, pool: input.pool.toString() },
+      // Every share, as computed now: the ledger reads these, so later rule changes never move them.
+      payouts: {
+        pitches: payouts.pitches.map((x) => ({ pitchId: x.pitchId, amount: x.amount.toString() })),
+        voters: payouts.voters.map((x) => ({ wallet: x.wallet, amount: x.amount.toString() })),
+        masters: payouts.masters.map((x) => ({ masterId: x.masterId, amount: x.amount.toString() })),
+      },
       result: {
         ...result,
         funding: { allocatedCredits: asCredits(allocated), fromTreasuryCredits: asCredits(funding.fromTreasury), fromDevCredits: asCredits(funding.fromDev) },
@@ -472,7 +489,7 @@ export async function ledger(wallet: Address, deps: TournamentDeps = defaultDeps
     const f = byRound.get(v.times.number);
     const input = f ? { ...f.input, pool: BigInt(f.input.pool) } : null;
     const owners = new Map((input?.masters ?? []).map((m) => [m.id as string, m.ownerWallet as string]));
-    entries.push(...ledgerFor(wallet, v.doc, input, owners));
+    entries.push(...ledgerFor(wallet, v.doc, input, owners, f?.payouts ?? null));
   }
   return entries.sort((a, b) => b.round - a.round);
 }

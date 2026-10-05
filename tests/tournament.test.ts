@@ -11,6 +11,7 @@ import { applyHide, applyScore, applyVote, checkDemoUrl, textProblem, Tournament
 import {
   castVote,
   currentPool,
+  FREEZE_AFTER_MS,
   hidePitch,
   ledger,
   pastRounds,
@@ -617,12 +618,30 @@ describe("Paid rounds: frozen results, 60% pool and the dev's floor", () => {
     return p;
   }
 
+  it("waits a couple of minutes after the end before freezing (late writes land first)", async () => {
+    const s = setup();
+    const deps = { ...s.deps, grossTreasury: async () => C(100) };
+    await playRound({ ...s, deps });
+    s.setNow(UNLOCK + ROUND_MS + 30_000);
+    assert.equal((await pastRounds(deps)).finals[0], null);
+    s.setNow(UNLOCK + ROUND_MS + FREEZE_AFTER_MS + 1_000);
+    assert.ok((await pastRounds(deps)).finals[0]);
+  });
+
+  it("doesn't freeze while the Masters list can't be read (no Master loses a share)", async () => {
+    const s = setup();
+    const deps = { ...s.deps, grossTreasury: async () => C(100), masters: async () => Promise.reject(new Error("Orbio down")) };
+    await playRound({ ...s, deps: s.deps });
+    s.setNow(UNLOCK + ROUND_MS + FREEZE_AFTER_MS + 1_000);
+    assert.equal((await pastRounds(deps)).finals[0], null);
+  });
+
   it("freezes a finished round once: pool, funding and shares never change after", async () => {
     const s = setup();
     let gross = C(100);
     const deps = { ...s.deps, grossTreasury: async () => gross };
     await playRound({ ...s, deps });
-    s.setNow(UNLOCK + ROUND_MS + 60_000);
+    s.setNow(UNLOCK + ROUND_MS + FREEZE_AFTER_MS + 1_000);
 
     const first = await pastRounds(deps);
     const f = first.finals[0]!;
@@ -641,13 +660,16 @@ describe("Paid rounds: frozen results, 60% pool and the dev's floor", () => {
     const again = await pastRounds(deps);
     assert.deepEqual(again.finals[0], f);
     assert.deepEqual(await ledger(lc(s.fighter), deps), fighterBefore);
+    // The shares are stored with the round: the ledger matches them exactly.
+    const won = fighterBefore.find((e) => e.role === "pitch")!;
+    assert.equal(won.amountAtoms, f.payouts.pitches[0].amount);
   });
 
   it("starts each round from what earlier rounds left in the treasury", async () => {
     const s = setup();
     const deps = { ...s.deps, grossTreasury: async () => C(1_000) };
     await playRound({ ...s, deps });
-    s.setNow(UNLOCK + ROUND_MS + 60_000);
+    s.setNow(UNLOCK + ROUND_MS + FREEZE_AFTER_MS + 1_000);
     const { finals, paidFromTreasury } = await pastRounds(deps);
     const paid = BigInt(finals[0]!.fromTreasuryAtoms);
     assert.equal(paidFromTreasury, paid);
@@ -662,7 +684,7 @@ describe("Paid rounds: frozen results, 60% pool and the dev's floor", () => {
     const at = s.deps.now();
     const p = await submitPitch(deps, ...(await signed(s.fighter, "pitch", pitchFields("101"), { at })));
     await castVote(deps, ...(await signed(s.voters[0], "vote", { Pitch: p.id }, { at })));
-    s.setNow(UNLOCK + ROUND_MS + 60_000);
+    s.setNow(UNLOCK + ROUND_MS + FREEZE_AFTER_MS + 1_000);
     const f = (await pastRounds(deps)).finals[0]!;
     assert.equal(f.allocatedAtoms, "0");
     assert.equal(f.fromDevAtoms, "0");
@@ -673,7 +695,7 @@ describe("Paid rounds: frozen results, 60% pool and the dev's floor", () => {
     const s = setup();
     const deps = { ...s.deps, grossTreasury: async () => null };
     await playRound({ ...s, deps });
-    s.setNow(UNLOCK + ROUND_MS + 60_000);
+    s.setNow(UNLOCK + ROUND_MS + FREEZE_AFTER_MS + 1_000);
     const v = await pastRounds(deps);
     assert.equal(v.finals[0], null);
     assert.equal(v.past[0].poolCredits, null);
