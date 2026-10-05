@@ -53,7 +53,7 @@ export interface EcoSpend {
   replyRuns: number;
   composeRuns: number;
   studyRuns: number;
-  /** Model dollars plus tool credit spent by the study job (counted against ECOBOT.study.dailyBudgetUsd). */
+  /** Model dollars plus tool credit spent by the study job (recorded only; there's no limit). */
   studyUsd: number;
 }
 

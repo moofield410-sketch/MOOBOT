@@ -1,3 +1,4 @@
+import { ECOBOT } from "@/config";
 import { runCompose } from "@/lib/ecobot/compose";
 import { botFacts } from "@/lib/ecobot/facts";
 import { toRow } from "@/lib/ecobot/history";
@@ -19,12 +20,14 @@ export async function runEcoJob(job: EcoJob, opts: { now?: () => number; fetch?:
   if (job === "news") return runEcoBot(opts);
   const src = opts.sources ?? realSources;
   const clock = opts.now ?? Date.now;
+  // The time limit counts from here: loading Orbio's agents and the facts uses the same 60 seconds.
+  const deadline = clock() + ECOBOT.jobBudgetMs;
   // Every agent on Orbio, so the model can find tokens by name. A failed read just means no search.
   const agents = await src.agents().catch(() => []);
   const ctx: ToolCtx = { rows: new Map(agents.map(toRow).map((r) => [r.token, r] as const)) };
   const deps = { fetch: opts.fetch, agent: src.agent, chart: src.chart };
   const facts = opts.facts ?? (() => botFacts(clock()));
-  const args = { now: clock, deps, ctx, facts };
+  const args = { now: clock, deadline, deps, ctx, facts };
   if (job === "mentions") return runMentions(args);
   if (job === "compose") return runCompose(args);
   return runStudy(args);

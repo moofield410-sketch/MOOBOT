@@ -94,7 +94,14 @@ function mentionsOf(result: unknown): Mention[] {
   );
 }
 
-export async function runMentions(opts: { now?: () => number; deps: Omit<ToolDeps, "now">; ctx: ToolCtx; facts: () => Promise<string[]> }): Promise<MentionsReport> {
+/** Posts @M00FIELD already answered, from its own timeline (replies included), by the id it answered. */
+async function answeredOnX(f: ToolDeps["fetch"]): Promise<{ ids: Set<string>; credit: number }> {
+  const r = await callTool("social.x.posts", { handle: OWN, replies: true, limit: C.ownReadLimit, authors: false, max_cost: xReadMaxCost({ limit: C.ownReadLimit, authors: false, timeline: true }) }, f);
+  if (r.status !== "settled") return { ids: new Set(), credit: 0 };
+  return { ids: new Set(xPostsOf(r.result).flatMap((p) => (p.inReplyTo ? [p.inReplyTo] : []))), credit: Number(r.costCredit) || 0 };
+}
+
+export async function runMentions(opts: { now?: () => number; deadline?: number; deps: Omit<ToolDeps, "now">; ctx: ToolCtx; facts: () => Promise<string[]> }): Promise<MentionsReport> {
   const clock = opts.now ?? Date.now;
   const start = clock();
   const mode = ecoBotMode();
@@ -103,7 +110,7 @@ export async function runMentions(opts: { now?: () => number; deps: Omit<ToolDep
   if (!jobEnabled("mentions")) return { ...report, note: "mentions are switched off (ECO_BOT_JOBS)" };
   if (!(await takeLock("mentions", start))) return { ...report, note: "another run is still working" };
   const deps: ToolDeps = { ...opts.deps, now: clock };
-  const deadline = start + ECOBOT.jobBudgetMs;
+  const deadline = opts.deadline ?? start + ECOBOT.jobBudgetMs;
   const newReplies: EcoPost[] = [];
   const newDrafts: EcoDraft[] = [];
 
@@ -128,14 +135,23 @@ export async function runMentions(opts: { now?: () => number; deps: Omit<ToolDep
       report.note = "no new mentions";
       return report;
     }
+    // What we already answered on X, whatever our own records say (a run cut off mid-way can't
+    // have saved it): those are never answered again.
+    const answered = mode === "on" ? await answeredOnX(deps.fetch) : { ids: new Set<string>(), credit: 0 };
+    await addSpend(start, { researchCredit: answered.credit });
 
     const mem = await readMemory();
     const system = replyPrompt(await opts.facts(), memoryBrief(mem));
     let memory = mem;
-    // Oldest first, so a conversation is answered in order.
-    for (const m of fresh.reverse()) {
+    // Newest first (the mentions timeline's own order): today's questions before yesterday's tags.
+    for (const m of fresh) {
       const author = m.from.toLowerCase();
-      if (deadline - clock() < 15_000) break;
+      if (answered.ids.has(m.id)) {
+        state.seen.unshift(m.id);
+        continue;
+      }
+      // One mention needs room for a model turn or two and the post; otherwise the next run takes it.
+      if (deadline - clock() < C.minMsPerMention) break;
       if (report.replied + report.drafted >= C.perRun) break;
       if (state.repliesToday >= C.perDay) {
         report.note = "today's reply limit is reached";
@@ -167,6 +183,10 @@ export async function runMentions(opts: { now?: () => number; deps: Omit<ToolDep
       if (idea) memory = learn(memory, { ideas: [{ ...idea, from: m.from }] }, new Date(clock()).toISOString());
       await addSpend(clock(), { modelUsd, researchCredit: loop.researchCredit, replyRuns: 1 });
 
+      // Saved as handled BEFORE posting: if the run is cut off after X publishes, it's never answered twice.
+      state.seen.unshift(m.id);
+      await kvSet(K.mentions, state);
+
       if (text && mode === "on") {
         const p = await publishReply(text, m.id, deps.fetch);
         if (p.kind === "published") {
@@ -182,8 +202,16 @@ export async function runMentions(opts: { now?: () => number; deps: Omit<ToolDep
         state.repliesToday++;
         state.byAuthor[author] = (state.byAuthor[author] ?? 0) + 1;
       }
-      // Handled either way: answered, judged not worth it, or refused by X. Never retried.
-      state.seen.unshift(m.id);
+      await kvSet(K.mentions, state);
+      if (newReplies.length || newDrafts.length) {
+        const r = newReplies[newReplies.length - 1];
+        const d = newDrafts[newDrafts.length - 1];
+        // Each reply goes on the log as it happens, for the same reason.
+        await noteJob("mentions", start, "working", null, (log) => {
+          if (r && !log.replies.some((x) => x.signal === r.signal)) log.replies = [r, ...log.replies].slice(0, ECOBOT.recentPosts);
+          if (d && !log.replyDrafts.some((x) => x.signal === d.signal)) log.replyDrafts = [d, ...log.replyDrafts].slice(0, 10);
+        });
+      }
     }
     if (memory !== mem) await writeMemory(memory);
     report.note ||= report.replied ? `replied to ${report.replied}` : report.drafted ? `drafted ${report.drafted} replies (preview)` : "nothing worth answering";
@@ -194,10 +222,7 @@ export async function runMentions(opts: { now?: () => number; deps: Omit<ToolDep
   } finally {
     state.seen = state.seen.slice(0, SEEN_KEEP);
     await kvSet(K.mentions, state);
-    await noteJob("mentions", start, report.note, report.error, (log) => {
-      log.replies = [...newReplies.reverse(), ...log.replies].slice(0, ECOBOT.recentPosts);
-      log.replyDrafts = [...newDrafts.reverse(), ...log.replyDrafts].slice(0, 10);
-    });
+    await noteJob("mentions", start, report.note, report.error);
     await freeLock("mentions");
   }
   return report;

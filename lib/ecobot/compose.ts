@@ -107,7 +107,7 @@ export function parseCompose(content: string | null, allowed: ComposeKind[]): Pa
 
 const problemsOf = (p: Parsed) => [...checkParts(p.parts, "original"), ...(p.poll ? checkPoll(p.poll) : [])];
 
-export async function runCompose(opts: { now?: () => number; deps: Omit<ToolDeps, "now">; ctx: ToolCtx; facts: () => Promise<string[]> }): Promise<ComposeReport> {
+export async function runCompose(opts: { now?: () => number; deadline?: number; deps: Omit<ToolDeps, "now">; ctx: ToolCtx; facts: () => Promise<string[]> }): Promise<ComposeReport> {
   const clock = opts.now ?? Date.now;
   const start = clock();
   const mode = ecoBotMode();
@@ -129,7 +129,7 @@ export async function runCompose(opts: { now?: () => number; deps: Omit<ToolDeps
   if (!(await takeLock("compose", start))) return { ...report, note: "another run is still working" };
 
   const deps: ToolDeps = { ...opts.deps, now: clock };
-  const deadline = start + ECOBOT.jobBudgetMs;
+  const deadline = opts.deadline ?? start + ECOBOT.jobBudgetMs;
   let newPost: EcoPost | null = null;
   let newDraft: EcoDraft | null = null;
   try {

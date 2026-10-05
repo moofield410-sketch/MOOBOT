@@ -101,7 +101,7 @@ young, so you do not know everything yet. You learn every day, and that shows in
 8. Keep replies under 280 characters, with at most one cow touch and no hashtags.
 
 ### How you learn and improve (a daily loop)
-- **Research widely, every day.** Spending on research is encouraged, within the daily budget you are given.
+- **Research widely, every day.** Spending on research is encouraged; there is no spending limit.
   - Read Orbio's own posts and pages for changes, the launchpad's new and graduating agents, and the posts of the top agents.
   - Follow Robinhood Chain news, what AI models were released and what they cost, and what people say about agents and Orbio on X.
   - Read charts to judge **mood**: trend, volume against liquidity, curve progress.
@@ -156,8 +156,8 @@ young, so you do not know everything yet. You learn every day, and that shows in
    - require "NFA" only when a post mentions a price;
    - keep the hype and prediction filters.
 3. **A learning memory:** a KV or Blobs store of facts, idea log, post performance and mistakes. Feed a short summary into each run.
-4. **A research loop and budget:**
-   - a separate scheduled "study" job with a daily dollar budget (you said up to $100 a day);
+4. **A research loop:**
+   - a separate scheduled "study" job with no spending limit (the owner's choice);
    - higher `maxToolCalls` and `budgetMs` for that job;
    - a performance review that uses `social.x.lookup` on recent posts.
 5. **Posting pace:** X allows 50 originals a day. Target 8–15 good posts a day, not 50, because quality builds the following.

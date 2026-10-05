@@ -261,13 +261,20 @@ export const ECOBOT = {
    */
   xPostCredit: 0.0055,
   xAccountCredit: 0.011,
-  /** Every job's run must fit the route's 60 seconds. */
-  jobBudgetMs: 50_000,
+  /**
+   * Every job's run must fit the route's 60 seconds, counted from when the route started (loading
+   * Orbio's agents and the live facts comes out of it too), with room to save its records.
+   */
+  jobBudgetMs: 42_000,
   mentions: {
     /** Posts read per mentions poll (X sends at least 5; charged once per UTC day each). */
     readLimit: 20,
     /** Mentions older than this are left alone. */
     maxAgeH: 24,
+    /** The bot's own latest posts and replies read before answering, so nothing is answered twice. */
+    ownReadLimit: 20,
+    /** A mention isn't started with less time than this left in the run. */
+    minMsPerMention: 20_000,
     perRun: 4,
     /** Below Orbio's 100 X replies a day, so the allowance is never the thing that stops it. */
     perDay: 80,
@@ -289,13 +296,10 @@ export const ECOBOT = {
     perThreadPartMaxCost: 0.0175,
   },
   study: {
-    /**
-     * The owner's research budget per UTC day, in US dollars (model) plus $CREDIT (tools), counted
-     * together (one $CREDIT is one dollar). The owner said up to $100 a day is fine (2026-10-05).
-     */
-    dailyBudgetUsd: 100,
+    /** No spending limit (the owner's choice, 2026-10-05: research is not capped). Spend is recorded for Status. */
     maxToolCalls: 10,
-    maxTokens: 1_500,
+    /** The notes are one JSON answer: 1,500 tokens cut the first live session's off mid-way. Kept short (see studyPrompt) so it also fits the time limit. */
+    maxTokens: 2_500,
     temperature: 0.4,
     /** Characters of each research result the model sees (news and replies get 2,500). */
     resultChars: 4_000,

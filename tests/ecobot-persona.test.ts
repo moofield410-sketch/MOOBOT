@@ -189,6 +189,38 @@ describe("Mentions", () => {
     assert.equal((await readLog()).replies.length, 1);
   });
 
+  it("never answers a mention it already answered on X, even if its own records were lost", async () => {
+    env(ECOBOT.env, "on");
+    const inner = gateway([say({ reply: "Moo, thanks 🐄", why: "-" })], [tweet("950", "kachi", "@M00FIELD thanks for the heads-up")]);
+    const f: GatewayFetch = async (url, init) => {
+      const body = JSON.parse(init.body);
+      if (url.endsWith("/tools/social.x.posts") && String(body.handle).toLowerCase() === "m00field") {
+        calls.push({ url, body });
+        return { status: 200, json: async () => ({ result: { tweets: [{ ...tweet("951", "M00FIELD", "@kachi Anytime!"), in_reply_to_status_id_str: "950" }] }, cost: { credit: "0.03" } }) };
+      }
+      return inner(url, init);
+    };
+    const r = await runMentions({ now: () => T0, deps: deps(f), ctx: ctx(), facts });
+    assert.equal(r.replied, 0);
+    assert.equal(calls.filter((c) => c.url.endsWith("/tools/social.post")).length, 0);
+    assert.equal(calls.filter((c) => c.url.endsWith("/chat/completions")).length, 0, "no AI spent on it either");
+  });
+
+  it("saves each reply as it goes, so a run cut off mid-way never answers twice", async () => {
+    env(ECOBOT.env, "on");
+    const f = gateway([say({ reply: "Rounds never skip: no pitches means no winner, and the next round starts on time 🐄", why: "-" })], [tweet("960", "q1", "@M00FIELD what if nobody joins?")]);
+    // The post call is the last thing this run gets to do: the "server" dies right after.
+    const dying: GatewayFetch = async (url, init) => {
+      const res = await f(url, init);
+      if (url.endsWith("/tools/social.post")) throw new Error("killed after 60 s");
+      return res;
+    };
+    await runMentions({ now: () => T0, deps: deps(dying), ctx: ctx(), facts });
+    calls = [];
+    await runMentions({ now: () => T0 + 15 * 60_000, deps: deps(f), ctx: ctx(), facts });
+    assert.equal(calls.filter((c) => c.url.endsWith("/tools/social.post")).length, 0, "not answered a second time");
+  });
+
   it("drops a reply the guard refuses twice, and caps replies per account", async () => {
     env(ECOBOT.env, "on");
     const f = gateway([say({ reply: "Buy $MOOBOT now, it will surely graduate", why: "-" })], [tweet("701", "bot1", "@M00FIELD 1")]);
@@ -273,12 +305,12 @@ describe("Study", () => {
     assert.match(user, /"likes":40/);
   });
 
-  it("stops for the day when the study budget is spent", async () => {
+  it("has no spending limit: it studies however much it already spent today", async () => {
     env(ECOBOT.env, "on");
-    await addSpend(T0, { studyUsd: ECOBOT.study.dailyBudgetUsd });
-    const r = await runStudy({ now: () => T0, deps: deps(gateway([])), ctx: ctx(), facts });
-    assert.match(r.note, /study budget/);
-    assert.equal(calls.length, 0);
+    await addSpend(T0, { studyUsd: 500 });
+    const f = gateway([say({ facts: [{ text: "Orbio added embeddings to the gateway.", source: "@orbiodotso" }], summary: "-" })]);
+    const r = await runStudy({ now: () => T0, deps: deps(f), ctx: ctx(), facts, topic: "orbio-protocol" });
+    assert.equal(r.learned, 1);
   });
 });
 
