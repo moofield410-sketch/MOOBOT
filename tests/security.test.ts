@@ -35,3 +35,17 @@ describe("rate limit", () => {
     assert.ok(allow(k, 3, 1_000, 11_100));
   });
 });
+
+describe("several RPC endpoints", () => {
+  it("reads a comma-separated list, best first, and ignores anything that isn't a URL", async () => {
+    const { rpcUrls } = await import("@/lib/sources/chain");
+    assert.deepEqual(rpcUrls(" https://a.example/v2/K1 , https://b.example/K2,,not-a-url"), ["https://a.example/v2/K1", "https://b.example/K2"]);
+    assert.deepEqual(rpcUrls(undefined), []);
+  });
+
+  it("hides every endpoint in errors, not only the first", () => {
+    process.env.RPC_URL = "https://a.example/v2/FIRSTSECRET123,https://b.example/SECONDSECRET456";
+    const shown = errorMessage(new Error("both failed: https://a.example/v2/FIRSTSECRET123 and https://b.example/SECONDSECRET456"));
+    assert.ok(!shown.includes("SECRET"), shown);
+  });
+});

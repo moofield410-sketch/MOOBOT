@@ -1,4 +1,4 @@
-import { createPublicClient, erc20Abi, getAddress, http, parseAbiItem, type AbiEvent, type PublicClient } from "viem";
+import { createPublicClient, erc20Abi, fallback, getAddress, http, parseAbiItem, type AbiEvent, type PublicClient } from "viem";
 import { robinhood } from "viem/chains";
 import { CHAIN, CONTRACTS, GRADUATION } from "@/config";
 import type { Address, Hash } from "@/lib/types";
@@ -17,11 +17,35 @@ function rpc(): PublicClient {
   return c;
 }
 
-/** Server-side public client on the confirmed chain, or null while RPC_URL is not set. */
+/**
+ * The RPC endpoints from RPC_URL: one URL, or several separated by commas, best first (put an
+ * archive node first: it can read balances at any old block). Anything that isn't an http(s) URL
+ * is ignored.
+ */
+export function rpcUrls(raw: string | undefined = process.env[CHAIN.rpcUrlEnv]): string[] {
+  return (raw ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => /^https?:\/\/\S+$/.test(s));
+}
+
+/**
+ * Server-side public client on the confirmed chain, or null while RPC_URL is not set. With more
+ * than one endpoint, a request that fails or times out on one is sent to the next, in order.
+ */
 export function publicClientOrNull(): PublicClient | null {
-  const url = process.env[CHAIN.rpcUrlEnv];
-  if (!url) return null;
-  client ??= createPublicClient({ chain: robinhood, transport: http(url, { timeout: 10_000, retryCount: 2 }) }) as PublicClient;
+  const urls = rpcUrls();
+  if (urls.length === 0) return null;
+  client ??= createPublicClient({
+    chain: robinhood,
+    transport:
+      urls.length === 1
+        ? http(urls[0], { timeout: 10_000, retryCount: 2 })
+        : fallback(
+            urls.map((u) => http(u, { timeout: 10_000, retryCount: 1 })),
+            { retryCount: 1 },
+          ),
+  }) as PublicClient;
   return client;
 }
 

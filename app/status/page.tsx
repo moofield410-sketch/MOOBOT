@@ -118,6 +118,9 @@ export default async function StatusPage() {
             <StatRow label="Connection" value={<StatusPill tone={s.rpc.status === "ok" ? "good" : s.rpc.status === "down" ? "warn" : "off"}>{s.rpc.status === "ok" ? "Healthy" : s.rpc.status === "down" ? "Unavailable" : s.mode === "mock" ? "Preview" : "Not connected yet"}</StatusPill>} />
             <StatRow label="Response time" value={s.rpc.latencyMs !== null ? `${s.rpc.latencyMs} ms` : "n/a"} />
             <StatRow label="Latest block" value={formatInt(s.rpc.headBlock)} />
+            {s.rpc.endpoints !== undefined && (
+              <StatRow label="RPC endpoints" value={s.rpc.endpoints > 1 ? `${s.rpc.endpoints} (the next one takes over if one fails)` : "1 (add a second, comma-separated, as a backup)"} />
+            )}
             {s.rpc.status === "ok" && (
               <StatRow
                 label="Old balances"

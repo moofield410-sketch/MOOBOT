@@ -24,20 +24,23 @@ export function errorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
   let t = raw.split("\n")[0].trim();
   const env: Record<string, string | undefined> = typeof process !== "undefined" ? process.env : {};
-  let rpcOrigin: string | null = null;
-  try {
-    rpcOrigin = env.RPC_URL ? new URL(env.RPC_URL).origin : null;
-  } catch {
-    rpcOrigin = null;
+  // RPC_URL may list several endpoints, comma-separated: each one is a secret.
+  const rpcList = (env.RPC_URL ?? "").split(",").map((u) => u.trim()).filter(Boolean);
+  const rpcOrigins = new Set<string>();
+  for (const u of rpcList) {
+    try {
+      rpcOrigins.add(new URL(u).origin);
+    } catch {
+      // Not a URL: still masked below as a plain secret.
+    }
   }
-  for (const k of SECRET_ENVS) {
-    const v = env[k]?.trim();
+  for (const v of [...rpcList, ...SECRET_ENVS.filter((k) => k !== "RPC_URL").map((k) => env[k]?.trim())]) {
     if (v && v.length >= 8) t = t.split(v).join("[hidden]");
   }
   t = t.replace(/https?:\/\/[^\s"'<>)]+/g, (u) => {
     try {
       const o = new URL(u).origin;
-      return o === rpcOrigin ? "[rpc]" : o;
+      return rpcOrigins.has(o) ? "[rpc]" : o;
     } catch {
       return "[link]";
     }

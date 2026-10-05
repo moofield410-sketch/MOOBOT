@@ -7,7 +7,7 @@ import { orbioFetchState } from "@/lib/sources/orbio-api";
 import type { SystemStatus } from "@/lib/types";
 import { erc20Abi } from "viem";
 import { CHAIN, CONTRACTS } from "@/config";
-import { publicClientOrNull } from "@/lib/sources/chain";
+import { publicClientOrNull, rpcUrls } from "@/lib/sources/chain";
 
 /** About three days of Robinhood Chain blocks (~100 ms each): a whole Tournament round. */
 const ROUND_OF_BLOCKS = 2_600_000n;
@@ -42,7 +42,7 @@ export async function getStatus(): Promise<SystemStatus> {
     const t0 = Date.now();
     try {
       const head = await reader.headBlock();
-      rpc = { status: "ok", latencyMs: Date.now() - t0, headBlock: head.toString(), archive: await keepsOldState(head) };
+      rpc = { status: "ok", latencyMs: Date.now() - t0, headBlock: head.toString(), archive: await keepsOldState(head), endpoints: rpcUrls().length };
     } catch (err) {
       rpc = { status: "down", latencyMs: null, headBlock: null, error: errorMessage(err) };
     }

@@ -214,6 +214,8 @@ export interface SystemStatus {
     error?: string;
     /** Whether the node still answers balances from days ago (an archive node): then votes are read directly. null = unknown. */
     archive?: boolean | null;
+    /** How many RPC endpoints RPC_URL lists (a failed request moves on to the next). */
+    endpoints?: number;
   };
   indexer: { lastScannedBlock: string | null; lagBlocks: string | null; lastScanAt: string | null; lastScanError: string | null };
   orbio: { lastFetchAt: string | null; agentsTotal: number | null; graduated: number | null; hiddenMismatches: number; lastError: string | null } | null;
