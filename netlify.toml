@@ -32,6 +32,7 @@
 
 # The MooBot Eco Bot: netlify/functions/ecobot.mjs starts ecobot-background.mjs (which may run
 # longer than a scheduled function's 30 seconds), which calls /api/cron/ecobot. Offset by 7 minutes
-# from the jobs above. ECO_BOT decides what it does (off, preview, on). See lib/ecobot/run.ts.
+# from the jobs above. Each round runs news, mentions and compose, and study once an hour.
+# ECO_BOT (off, preview, on) and ECO_BOT_JOBS decide what runs. See lib/ecobot/jobs.ts.
 [functions."ecobot"]
   schedule = "7,22,37,52 * * * *"

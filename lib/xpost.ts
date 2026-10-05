@@ -78,12 +78,28 @@ export const postMaxCost = (images: number) => (GATEWAY.autopost.postMaxCost + G
  * Sends one post. Records the pace on success. Throws for account-wide problems (key, balance,
  * account not connected, rate limit, outage): the caller stops and the next run tries again.
  */
-export async function publishToX(text: string, media: { url: string; type: "image" }[] | undefined, now: number, f?: GatewayFetch): Promise<Published> {
+export async function publishToX(
+  text: string,
+  media: { url: string; type: "image" }[] | undefined,
+  now: number,
+  f?: GatewayFetch,
+  extra: { thread?: string[]; poll?: { options: string[]; duration_minutes?: number } } = {},
+): Promise<Published> {
+  const parts = extra.thread?.length ?? 0;
+  const maxCost = (Number(postMaxCost(media?.length ?? 0)) + parts * ECOBOT.compose.perThreadPartMaxCost).toFixed(4);
   let r;
   try {
     r = await callTool(
       "social.post",
-      { text, platforms: ["twitter"], ...(media?.length ? { media } : {}), allow_links: false, max_cost: postMaxCost(media?.length ?? 0) },
+      {
+        text,
+        platforms: ["twitter"],
+        ...(media?.length ? { media } : {}),
+        ...(parts ? { thread: extra.thread } : {}),
+        ...(extra.poll ? { poll: extra.poll } : {}),
+        allow_links: false,
+        max_cost: maxCost,
+      },
       f,
     );
   } catch (err) {
@@ -103,6 +119,28 @@ export async function publishToX(text: string, media: { url: string; type: "imag
   const postsLeft = postsLeftOf(result);
   await notePosted(now, postsLeft);
   return { kind: "published", status, url, postsLeft, costCredit: r.costCredit };
+}
+
+/**
+ * Answers one X post that mentions @M00FIELD (X refuses replies to anything else). Replies have
+ * their own daily allowance on Orbio (100 on X), so they don't move the shared pace. Throws for
+ * account-wide problems, like publishToX.
+ */
+export async function publishReply(text: string, replyTo: string, f?: GatewayFetch): Promise<Published> {
+  let r;
+  try {
+    r = await callTool("social.post", { text, platforms: ["twitter"], reply_to: replyTo, allow_links: false, max_cost: postMaxCost(0) }, f);
+  } catch (err) {
+    if (err instanceof GatewayError && (err.status === 400 || err.status === 404)) return { kind: "refused", reason: err.message };
+    throw err;
+  }
+  if (r.status === "running") return { kind: "published", status: "publishing", url: null, postsLeft: null, costCredit: null };
+  const result = r.result && typeof r.result === "object" ? (r.result as Record<string, unknown>) : null;
+  const platforms = Array.isArray(result?.platforms) ? (result.platforms as Record<string, unknown>[]) : [];
+  const status = String(result?.status ?? "published");
+  if (status === "failed") return { kind: "failed", reason: failureReason(result, platforms) };
+  const url = platforms.map((p) => p.platformPostUrl).find((u): u is string => typeof u === "string") ?? null;
+  return { kind: "published", status, url, postsLeft: null, costCredit: r.costCredit };
 }
 
 /** For the Status page. */

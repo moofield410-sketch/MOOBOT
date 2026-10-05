@@ -237,6 +237,65 @@ export const ECOBOT = {
   /** Hourly price readings kept (just over a day). */
   historyHours: 26,
   recentPosts: 20,
+  /**
+   * The persona jobs (lib/ecobot/mentions.ts, compose.ts, study.ts). ECO_BOT still switches them
+   * all (off, preview = drafts only, on = posts); ECO_BOT_JOBS (comma-separated: news, mentions,
+   * compose, study) narrows which run. Unset = all four.
+   */
+  jobsEnv: "ECO_BOT_JOBS",
+  /** Models per job, and their prices in US dollars per token (Orbio's catalogue, checked 2026-10-04). */
+  models: {
+    news: "anthropic/claude-sonnet-5.5",
+    reply: "anthropic/claude-sonnet-5.5",
+    compose: "anthropic/claude-sonnet-5.5",
+    study: "anthropic/claude-sonnet-5.5",
+  },
+  modelPrices: {
+    "anthropic/claude-sonnet-5.5": { input: 0.000002, output: 0.00001 },
+    "anthropic/claude-haiku-4.5": { input: 0.000001, output: 0.000005 },
+  } as Record<string, { input: number; output: number }>,
+  /** Every job's run must fit the route's 60 seconds. */
+  jobBudgetMs: 50_000,
+  mentions: {
+    /** Posts read per mentions poll (X sends at least 5; charged once per UTC day each). */
+    readLimit: 20,
+    readMaxCost: "0.33",
+    /** Mentions older than this are left alone. */
+    maxAgeH: 12,
+    perRun: 4,
+    /** Below Orbio's 100 X replies a day, so the allowance is never the thing that stops it. */
+    perDay: 80,
+    /** Replies to one account per UTC day: stops two bots answering each other forever. */
+    perAuthorPerDay: 3,
+    maxToolCalls: 3,
+    maxTokens: 500,
+    temperature: 0.6,
+  },
+  compose: {
+    /** At least this long between two composed posts (the shared minGapMinutes still applies too). */
+    gapMinutes: 75,
+    perDay: 12,
+    maxToolCalls: 5,
+    maxThread: 4,
+    maxTokens: 1_200,
+    temperature: 0.8,
+    /** Most a composed post may cost on X: text plus one more post per thread part (Orbio's quote: 0.0165 each). */
+    perThreadPartMaxCost: 0.0175,
+  },
+  study: {
+    /**
+     * The owner's research budget per UTC day, in US dollars (model) plus $CREDIT (tools), counted
+     * together (one $CREDIT is one dollar). The owner said up to $100 a day is fine (2026-10-05).
+     */
+    dailyBudgetUsd: 100,
+    maxToolCalls: 10,
+    maxTokens: 1_500,
+    temperature: 0.4,
+    /** Characters of each research result the model sees (news and replies get 2,500). */
+    resultChars: 4_000,
+  },
+  /** How much the bot remembers (lib/ecobot/memory.ts), and how much of it goes into each prompt. */
+  memory: { facts: 120, ideas: 60, lessons: 40, postIdeas: 30, mistakes: 20, briefFacts: 25, briefLessons: 10, briefIdeas: 8 },
 } as const;
 
 /** On-chain graduation log scanning. Unused while no launchpad contract is published. */

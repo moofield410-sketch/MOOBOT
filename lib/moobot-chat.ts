@@ -118,7 +118,7 @@ export async function chatSpendToday(now = Date.now()): Promise<number> {
 // ---------------------------------------------------------------------------
 
 /** Live facts from the same sources as the site. Anything that fails is simply left out. */
-async function liveFacts(): Promise<string[]> {
+export async function liveFacts(): Promise<string[]> {
   const t = buildTimeline(Date.parse(AGENT_LIVE_AT), FULL_UNLOCK_AFTER_H);
   const facts = [
     `Go-live (MooBot wakes): ${formatUtcDateTime(t.agentLiveAt)}. The Tournament unlocks ${formatUtcDateTime(t.fullUnlockAt)}.`,

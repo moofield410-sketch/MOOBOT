@@ -24,6 +24,8 @@ const SUMMARY: Record<Health, { title: string; body: string; dot: string }> = {
   down: { title: "Data source unavailable", body: "We can't reach the blockchain right now. Cached data is shown where possible.", dot: "bg-fern" },
 };
 
+const ECO_JOB_LABEL = { mentions: "Replies", compose: "Own posts", study: "Study" } as const;
+
 const MOOBOT_STATE_LABEL: Record<SystemStatus["moobot"]["status"], string> = {
   "not-launched": "Not launched yet",
   invalid: "Address rejected (invalid)",
@@ -264,9 +266,17 @@ export default async function StatusPage() {
           />
           <StatRow label="Last run" value={eco.lastRunAt ? `${formatUpdated(eco.lastRunAt).replace("Updated ", "")}${eco.lastNote ? ` · ${eco.lastNote}` : ""}` : "Not yet"} />
           <StatRow label="Waiting news" value={formatInt(eco.pending)} />
+          {(["mentions", "compose", "study"] as const).map((j) => {
+            const r = eco.jobs[j];
+            return <StatRow key={j} label={ECO_JOB_LABEL[j]} value={r ? `${formatUpdated(r.at).replace("Updated ", "")} · ${r.error ?? r.note}` : "Not yet"} />;
+          })}
           <StatRow
             label="Spent today (UTC)"
-            value={`$${eco.spend.modelUsd.toFixed(2)} AI · ${eco.spend.researchCredit.toFixed(2)} research · ${eco.spend.postCredit.toFixed(2)} posts`}
+            value={`$${eco.spend.modelUsd.toFixed(2)} AI · ${eco.spend.researchCredit.toFixed(2)} research · ${eco.spend.postCredit.toFixed(2)} posts · ${formatInt(eco.spend.replyRuns)} replies read · ${formatInt(eco.spend.studyRuns)} study sessions`}
+          />
+          <StatRow
+            label="Memory"
+            value={`${formatInt(eco.memory.facts)} facts · ${formatInt(eco.memory.lessons)} lessons · ${formatInt(eco.memory.ideas)} ideas · ${formatInt(eco.memory.postIdeas)} post ideas`}
           />
           {eco.lastError && <StatRow label="Last problem" value={<span className="text-sm font-normal">{eco.lastError}</span>} />}
         </dl>
@@ -288,7 +298,7 @@ export default async function StatusPage() {
                 <li key={p.at + p.signal} className="rounded-xl border border-line bg-hay/40 p-4">
                   <p className="whitespace-pre-line break-words text-sm text-soil">{p.text}</p>
                   <p className="mt-2 font-mono text-[11px] text-fern">
-                    {formatUpdated(p.at).replace("Updated ", "")} · {p.signal.split(":")[0]}
+                    {formatUpdated(p.at).replace("Updated ", "")} · {p.signal.startsWith("compose:") ? p.signal.replace(":", " · ") : p.signal.split(":")[0]}
                     {"url" in p && p.url && (
                       <>
                         {" · "}
@@ -302,6 +312,41 @@ export default async function StatusPage() {
               ))}
             </ul>
           </>
+        )}
+
+        {(eco.mode === "on" ? eco.replies : eco.replyDrafts).length > 0 && (
+          <>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-fern">{eco.mode === "on" ? "Recent replies" : "Reply drafts (what it would answer)"}</p>
+            <ul className="mt-3 grid gap-3 md:grid-cols-2">
+              {(eco.mode === "on" ? eco.replies : eco.replyDrafts).map((p) => (
+                <li key={p.at + p.signal} className="rounded-xl border border-line bg-hay/40 p-4">
+                  <p className="whitespace-pre-line break-words text-sm text-soil">{p.text}</p>
+                  <p className="mt-2 font-mono text-[11px] text-fern">
+                    {formatUpdated(p.at).replace("Updated ", "")}
+                    {"url" in p && p.url && (
+                      <>
+                        {" · "}
+                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="link">
+                          view on X
+                        </a>
+                      </>
+                    )}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {eco.memory.latestFacts.length > 0 && (
+          <div className="mt-5 rounded-xl border border-line bg-hay/40 p-4 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fern">Latest learning{eco.memory.updatedAt ? ` · ${formatUpdated(eco.memory.updatedAt).replace("Updated ", "")}` : ""}</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-soil">
+              {eco.memory.latestFacts.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          </div>
         )}
       </Card>
 

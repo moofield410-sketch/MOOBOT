@@ -5,6 +5,8 @@ import { ecoBotMode, type EcoBotMode } from "@/lib/ecobot/mode";
 import { detectSignals, emptyState, resolveSignals, type BotState, type Signal } from "@/lib/ecobot/signals";
 import { utcDay } from "@/lib/field-fund-history";
 import { kvGet, kvSet } from "@/lib/kv";
+import { memoryBrief as memoryBriefFor, readMemory } from "@/lib/ecobot/memory";
+import { freeLock, jobEnabled, K, readLog, readSpend, recentLines, takeLock, writeLog, type EcoDraft, type EcoLog, type EcoPost, type EcoSpend } from "@/lib/ecobot/store";
 import { errorMessage, reportError } from "@/lib/monitoring";
 import { gatewayKey, type GatewayFetch } from "@/lib/orbio-gateway";
 import { getOrbioTotals } from "@/lib/orbio-totals";
@@ -29,7 +31,7 @@ export interface EcoSources {
   chart(token: string, range: ChartRange): Promise<PriceChart>;
 }
 
-const realSources: EcoSources = {
+export const realSources: EcoSources = {
   // Orbio is usually quick, but one slow page shouldn't cost the whole run: try once more.
   agents: async () => (await fetchAllAgents().catch(() => fetchAllAgents())).agents,
   totals: async () => (await getOrbioTotals()).data,
@@ -41,45 +43,6 @@ const realSources: EcoSources = {
   chart: (token, range) => fetchAgentChart(token.toLowerCase() as Address, range),
 };
 
-export interface EcoPost {
-  at: string;
-  text: string;
-  signal: string;
-  url: string | null;
-  status: string;
-}
-
-export interface EcoDraft {
-  at: string;
-  text: string;
-  signal: string;
-  why: string;
-  research: string[];
-}
-
-interface EcoLog {
-  lastRunAt: string | null;
-  lastError: string | null;
-  /** What the bot did last time it looked, in plain words, for the Status page. */
-  lastNote: string | null;
-  lastDecision: { at: string; why: string; signals: string[]; research: string[]; text: string | null } | null;
-  lastCurveHour: string | null;
-  lastShown: { hash: string; at: number } | null;
-  posts: EcoPost[];
-  drafts: EcoDraft[];
-}
-
-export interface EcoSpend {
-  day: string;
-  modelUsd: number;
-  researchCredit: number;
-  postCredit: number;
-  editorRuns: number;
-}
-
-const K = { history: "ecobot:history", state: "ecobot:state", log: "ecobot:log", lock: "ecobot:lock", draftPace: "ecobot:draft-pace", spend: (d: string) => `ecobot:spend:${d}` };
-const emptyLog = (): EcoLog => ({ lastRunAt: null, lastError: null, lastNote: null, lastDecision: null, lastCurveHour: null, lastShown: null, posts: [], drafts: [] });
-
 export interface EcoReport {
   mode: EcoBotMode;
   note: string;
@@ -89,8 +52,6 @@ export interface EcoReport {
   error: string | null;
 }
 
-/** A run that dies mid-way frees the lock after this long. */
-const LOCK_MS = 10 * 60_000;
 /** Don't show the editor the very same signals again within this time. */
 const SAME_SIGNALS_MS = 2 * 3_600_000;
 
@@ -100,13 +61,11 @@ export async function runEcoBot(opts: { now?: () => number; fetch?: GatewayFetch
   const mode = ecoBotMode();
   const report: EcoReport = { mode, note: "", signals: [], decision: null, posted: null, error: null };
   if (mode === "off") return { ...report, note: "off" };
-
-  const lock = await kvGet<{ at: number }>(K.lock);
-  if (lock && start - lock.at < LOCK_MS) return { ...report, note: "another run is still working" };
-  await kvSet(K.lock, { at: start });
+  if (!jobEnabled("news")) return { ...report, note: "news is switched off (ECO_BOT_JOBS)" };
+  if (!(await takeLock("news", start))) return { ...report, note: "another run is still working" };
 
   const src = opts.sources ?? realSources;
-  const log = { ...emptyLog(), ...(await kvGet<EcoLog>(K.log)) };
+  const log = await readLog();
   const day = utcDay(start);
 
   try {
@@ -150,7 +109,8 @@ export async function runEcoBot(opts: { now?: () => number; fetch?: GatewayFetch
     else if (!pace.ok) report.note = `waiting (${pace.reason})`;
     else if (log.lastShown?.hash === hash && start - log.lastShown.at < SAME_SIGNALS_MS) report.note = "nothing new since the last look";
     else {
-      const d = await decide(signals, { ecosystem: ecosystem(rows, totals, start), recentPosts: recent(log, mode), rows: byToken, deadline: start + ECOBOT.budgetMs }, {
+      const memoryBrief = memoryBriefFor(await readMemory());
+      const d = await decide(signals, { ecosystem: ecosystem(rows, totals, start), recentPosts: recentLines(log, mode !== "on"), rows: byToken, deadline: start + ECOBOT.budgetMs, memoryBrief }, {
         fetch: opts.fetch,
         agent: src.agent,
         chart: src.chart,
@@ -158,7 +118,7 @@ export async function runEcoBot(opts: { now?: () => number; fetch?: GatewayFetch
       });
       log.lastShown = { hash, at: start };
       report.decision = { post: d.post, why: d.why, research: d.research };
-      const spend = { ...emptySpend(day), ...(await kvGet<EcoSpend>(K.spend(day))) };
+      const spend = await readSpend(day);
       spend.modelUsd += d.modelUsd;
       spend.researchCredit += d.researchCredit;
       spend.editorRuns++;
@@ -198,15 +158,14 @@ export async function runEcoBot(opts: { now?: () => number; fetch?: GatewayFetch
   } finally {
     log.lastRunAt = new Date(start).toISOString();
     log.lastNote = report.note;
-    await kvSet(K.log, log);
-    await kvSet(K.lock, { at: 0 });
+    log.jobs = { ...log.jobs, news: { at: log.lastRunAt, note: report.note, error: report.error } };
+    await writeLog(log);
+    await freeLock("news");
   }
   return report;
 }
 
-const emptySpend = (day: string): EcoSpend => ({ day, modelUsd: 0, researchCredit: 0, postCredit: 0, editorRuns: 0 });
-
-function ecosystem(rows: AgentRow[], totals: OrbioTotals | null, now: number): Record<string, string | number | null> {
+export function ecosystem(rows: AgentRow[], totals: OrbioTotals | null, now: number): Record<string, string | number | null> {
   const day = utcDay(now);
   return {
     agentsOnOrbio: totals?.agents ?? rows.length,
@@ -214,11 +173,6 @@ function ecosystem(rows: AgentRow[], totals: OrbioTotals | null, now: number): R
     combinedMarketCapUsd: totals?.marketCapMicroUsd ? Math.round(Number(totals.marketCapMicroUsd) / 1e6) : null,
     launchesToday: totals?.launchesByDay.find((d) => d.day === day)?.launches ?? null,
   };
-}
-
-/** The bot's own latest posts (or drafts in preview), newest first. */
-function recent(log: EcoLog, mode: EcoBotMode): string[] {
-  return (mode === "on" ? log.posts : log.drafts).map((p) => `${p.at.slice(0, 16)}Z ${p.text}`).slice(0, ECOBOT.recentPosts);
 }
 
 export interface EcoStatus {
@@ -229,15 +183,18 @@ export interface EcoStatus {
   lastDecision: EcoLog["lastDecision"];
   posts: EcoPost[];
   drafts: EcoDraft[];
+  replies: EcoPost[];
+  replyDrafts: EcoDraft[];
+  jobs: EcoLog["jobs"];
   spend: EcoSpend;
   pending: number;
+  memory: { facts: number; lessons: number; ideas: number; postIdeas: number; updatedAt: string | null; latestFacts: string[]; };
 }
 
 /** For the Status page. */
 export async function ecoBotStatus(now = Date.now()): Promise<EcoStatus> {
   const day = utcDay(now);
-  const [log, spend, state] = await Promise.all([kvGet<EcoLog>(K.log), kvGet<EcoSpend>(K.spend(day)), kvGet<BotState>(K.state)]);
-  const l = { ...emptyLog(), ...log };
+  const [l, spend, state, mem] = await Promise.all([readLog(), readSpend(day), kvGet<BotState>(K.state), readMemory()]);
   return {
     mode: ecoBotMode(),
     lastRunAt: l.lastRunAt,
@@ -246,9 +203,22 @@ export async function ecoBotStatus(now = Date.now()): Promise<EcoStatus> {
     lastDecision: l.lastDecision,
     posts: l.posts.slice(0, 5),
     drafts: l.drafts.slice(0, 4),
-    spend: { ...emptySpend(day), ...spend },
+    replies: l.replies.slice(0, 5),
+    replyDrafts: l.replyDrafts.slice(0, 4),
+    jobs: l.jobs,
+    spend,
     pending: state ? Object.keys(state.pending).length : 0,
+    memory: {
+      facts: mem.facts.length,
+      lessons: mem.lessons.length,
+      ideas: mem.ideas.length,
+      postIdeas: mem.postIdeas.length,
+      updatedAt: mem.updatedAt,
+      // Model-written facts only: community ideas are other people's words and stay off this public page.
+      latestFacts: mem.facts.slice(0, 3).map((f) => f.text),
+    },
   };
 }
 
 export type { Signal };
+export type { EcoPost, EcoDraft, EcoSpend };
