@@ -18,10 +18,21 @@ const memory = (g.__moofieldKv ??= new Map());
 /** Memory mode's stand-in for Blobs etags: a version number per key. */
 const versions = (g.__moofieldKvVersions ??= new Map());
 
+/**
+ * Outside Netlify (the MooBot runner on GitHub Actions, scripts/moobot.ts), the same store is
+ * reached with the site's id and a Netlify access token, so the bot and the website share one
+ * memory. On Netlify neither is needed.
+ */
+function outsideNetlify(): { siteID: string; token: string } | null {
+  const siteID = process.env.NETLIFY_SITE_ID?.trim();
+  const token = process.env.NETLIFY_BLOBS_TOKEN?.trim();
+  return siteID && token ? { siteID, token } : null;
+}
+
 function blobs() {
   if (g.__moofieldKvMode === "memory") return null;
   try {
-    const store = getStore({ name: STORE, consistency: "strong" });
+    const store = getStore({ name: STORE, consistency: "strong", ...outsideNetlify() });
     g.__moofieldKvMode = "blobs";
     return store;
   } catch (err) {

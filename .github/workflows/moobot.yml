@@ -1,0 +1,60 @@
+# MooBot, on GitHub Actions instead of Netlify functions, so its thinking costs no Netlify credits
+# (Netlify only serves the website). Every 15 minutes it starts scripts/moobot.ts, which runs the
+# fixed posts and every Eco Bot job once, then keeps answering mentions every 3 minutes for 13
+# minutes. GitHub may start a scheduled run a few minutes late; that's normal.
+#
+# Set up once, in the repo's Settings → Secrets and variables → Actions:
+#   Secrets:   ORBIO_API_KEY, NETLIFY_SITE_ID, NETLIFY_BLOBS_TOKEN (a Netlify personal access token)
+#   Variables: ECO_BOT (on / preview / off), AUTO_POST (on / preview / off), MOOBOT_TOKEN_ADDRESS,
+#              SITE_URL (https://moofield.lol), optional ECO_BOT_JOBS, RPC_URL
+# Run it by hand from the Actions tab ("Run workflow") to try it.
+#
+# No wallet, no chain writes.
+
+name: MooBot
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "How long to keep watching (minutes)"
+        default: "13"
+
+# One run at a time: a new one waits for the last to finish instead of overlapping it.
+concurrency:
+  group: moobot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: MooBot
+        run: node --import ./tests/setup/register.mjs scripts/moobot.ts "${{ github.event.inputs.minutes || '13' }}"
+        env:
+          NODE_ENV: production
+          ORBIO_API_KEY: ${{ secrets.ORBIO_API_KEY }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_BLOBS_TOKEN: ${{ secrets.NETLIFY_BLOBS_TOKEN }}
+          ECO_BOT: ${{ vars.ECO_BOT }}
+          ECO_BOT_JOBS: ${{ vars.ECO_BOT_JOBS }}
+          AUTO_POST: ${{ vars.AUTO_POST }}
+          MOOBOT_TOKEN_ADDRESS: ${{ vars.MOOBOT_TOKEN_ADDRESS }}
+          RPC_URL: ${{ vars.RPC_URL }}
+          # The fixed posts link images on the site (the Bloom Pop board).
+          URL: ${{ vars.SITE_URL }}
+          # No 60-second limit here: a job may think for up to 4 minutes, a model call for 90 seconds.
+          ECO_BOT_JOB_MS: "240000"
+          ORBIO_GATEWAY_TIMEOUT_MS: "90000"

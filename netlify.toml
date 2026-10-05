@@ -22,17 +22,10 @@
 
 # Scheduled Orbio refresh: netlify/functions/refresh-orbio.mjs calls /api/cron/scan.
 # Netlify only runs schedules on the published production deploy.
+# Every 15 minutes (it was 3): each call is a function run, and Netlify bills function time.
 [functions."refresh-orbio"]
-  schedule = "*/3 * * * *"
-
-# Auto-posting to @M00FIELD: netlify/functions/autopost.mjs calls /api/cron/autopost.
-# AUTO_POST decides what it does (off, preview = drafts only, on = posts). See lib/autopost/run.ts.
-[functions."autopost"]
   schedule = "*/15 * * * *"
 
-# The MooBot Eco Bot: netlify/functions/ecobot.mjs starts ecobot-background.mjs (which may run
-# longer than a scheduled function's 30 seconds), which calls /api/cron/ecobot. Offset by 7 minutes
-# from the jobs above. Each round runs news, mentions and compose, and study once an hour.
-# ECO_BOT (off, preview, on) and ECO_BOT_JOBS decide what runs. See lib/ecobot/jobs.ts.
-[functions."ecobot"]
-  schedule = "7,22,37,52 * * * *"
+# Auto-posting and the MooBot Eco Bot run on GitHub Actions (.github/workflows/moobot.yml), not
+# here, so their thinking costs no Netlify credits. The routes /api/cron/autopost and
+# /api/cron/ecobot stay for running a job by hand.

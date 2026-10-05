@@ -241,7 +241,8 @@ describe("Compose", () => {
     assert.ok(!allowedKinds(["explainer", "builder"], true).includes("explainer"));
     assert.ok(!allowedKinds([], false).includes("tournament"));
     assert.equal(suggestKind(["explainer", "spotlight"], [], [{ kind: "spotlight" }]), "spotlight");
-    assert.equal(suggestKind(["explainer", "spotlight"], [], []), "explainer");
+    assert.equal(suggestKind(["explainer", "spotlight"], [], []), "spotlight", "spotlights before explainers");
+    assert.equal(suggestKind(allowedKinds([], true), [], []), "bull", "bull posts come first");
   });
 
   it("reads threads and polls, and never both", () => {
@@ -262,7 +263,7 @@ describe("Compose", () => {
     assert.equal((post.body.thread as string[]).length, 1);
     assert.equal(post.body.max_cost, "0.0375");
     assert.ok(calls.some((c) => c.url.endsWith("/tools/web.scrape")));
-    const soon = await runCompose({ now: () => T0 + 30 * 60_000, deps: deps(f), ctx: ctx(), facts });
+    const soon = await runCompose({ now: () => T0 + 20 * 60_000, deps: deps(f), ctx: ctx(), facts });
     assert.match(soon.note, /next composed post in/);
   });
 
@@ -281,7 +282,9 @@ describe("Compose", () => {
 describe("Study", () => {
   it("rotates topics by the hour and writes what it learned into memory", async () => {
     env(ECOBOT.env, "preview");
-    assert.notEqual(topicFor(T0), topicFor(T0 + H));
+    const slot = ECOBOT.study.everyMinutes * 60_000;
+    assert.notEqual(topicFor(T0), topicFor(T0 + slot));
+    assert.ok([0, 1].some((i) => topicFor(T0 + i * slot) === "orbio-x-trends"), "X trends every other session");
     const f = gateway([toolCall("web_search", { query: "Robinhood Chain news" }), say({ facts: [{ text: "Robinhood Chain added a new Stock Token for SPY.", source: "news.example", topic: "robinhood-chain" }], lessons: [], postIdeas: [{ kind: "bigpicture", angle: "Stocks and agents on one chain" }], ideas: [], mistakes: [], summary: "Learned about new Stock Tokens." })]);
     const r = await runStudy({ now: () => T0, deps: deps(f), ctx: ctx(), facts, topic: "robinhood-chain" });
     assert.equal(r.learned, 2);

@@ -19,8 +19,8 @@ import type { CreditStats, DataEnvelope, Master, PastRound } from "@/lib/types";
 
 /**
  * The fixed posts to @M00FIELD (launch, Bloom Pop board, and the recap and graduation posts while
- * the Eco Bot is off). SERVER-SIDE ONLY. Run every 15 minutes by netlify/functions/autopost.mjs
- * (via /api/cron/autopost). Posting and pacing are shared with the Eco Bot (lib/xpost.ts).
+ * the Eco Bot is off). SERVER-SIDE ONLY. Run every 15 minutes by the GitHub runner
+ * (scripts/moobot.ts), or by hand through /api/cron/autopost. Posting and pacing are shared with the Eco Bot (lib/xpost.ts).
  *
  * AUTO_POST=off      nothing happens.
  * AUTO_POST=preview  (the default) the posts that would go out are saved as drafts for the Status

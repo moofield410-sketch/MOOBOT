@@ -5,10 +5,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * One Eco Bot job (lib/ecobot/jobs.ts): ?job=news (the default), mentions, compose or study. On
- * Netlify, netlify/functions/ecobot.mjs (scheduled every 15 minutes) starts
- * netlify/functions/ecobot-background.mjs, which calls this route once per job, because a
- * scheduled function itself only gets 30 seconds. In production it requires
+ * One Eco Bot job (lib/ecobot/jobs.ts), for running it by hand: ?job=news (the default),
+ * mentions, compose or study. The scheduled runs happen on GitHub Actions (scripts/moobot.ts), so
+ * the bot's thinking costs no Netlify credits. In production it requires
  * Authorization: Bearer <CRON_SECRET>, like /api/cron/scan.
  */
 export async function GET(req: Request) {

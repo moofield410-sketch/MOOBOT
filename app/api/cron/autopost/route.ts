@@ -3,9 +3,8 @@ import { runAutoPost } from "@/lib/autopost/run";
 export const dynamic = "force-dynamic";
 
 /**
- * One auto-post run (lib/autopost/run.ts). On Netlify the scheduled function
- * netlify/functions/autopost.mjs calls it every 15 minutes (schedule in netlify.toml).
- * In production it requires Authorization: Bearer <CRON_SECRET>, like /api/cron/scan.
+ * One auto-post run (lib/autopost/run.ts), for running it by hand. The scheduled runs happen on
+ * GitHub Actions (scripts/moobot.ts), not through this route. In production it requires Authorization: Bearer <CRON_SECRET>, like /api/cron/scan.
  */
 export async function GET(req: Request) {
   if (process.env.NODE_ENV === "production") {

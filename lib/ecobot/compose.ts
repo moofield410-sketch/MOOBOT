@@ -22,9 +22,11 @@ const C = ECOBOT.compose;
 const TOOLS: ToolName[] = ["orbio_find", "orbio_agent", "x_posts", "x_account", "x_search", "web_search", "web_read"];
 
 export const COMPOSE_KINDS = {
+  bull: "The bull case, loud and confident, for one part of the Orbio ecosystem or your own project: why tokenized inference matters, why agents that pay for their own thinking change everything, why Orbio on Robinhood Chain is a big deal, what $MOOBOT and the Tournament are building. Real facts and real excitement; never a price, a target or a promise.",
+  trend: "What's trending in the Orbio ecosystem on X right now. Search X first (Orbio, CREDIT, the launchpad, the agents people tag), find the topic or project people are talking about most, and give your take: what it is, why it matters, what you think.",
   explainer: "Teach ONE concept to a newcomer: what CREDIT is, activation, why credit trades below $1, how creator fees feed an agent, what graduation means, square-root voting, what a Stock Token is, how an agent pays for itself. Concrete, no jargon left unexplained.",
   builder: "A builder log: what you did and learned recently, what your credits paid for (use today's spend from the live facts), what you want to try next. Honest and specific.",
-  spotlight: "Spotlight another Orbio agent: research what it actually built or shipped (its own posts, its Orbio record) and explain why it's interesting. Lift it up. Not a price post.",
+  spotlight: "Spotlight another Orbio project people on X are excited about: find it through X (who's being tagged and talked about), read what it actually built or shipped (its own posts, its Orbio record), and explain why it's good. Lift it up. Not a price post.",
   tournament: "A Tournament call: invite Fighters to pitch, Masters to score and tender, holders of 1,000+ ORBIO to vote, with the round's real deadline from the live facts. Free signatures, no gas. \"Don't be shy\" energy, concrete steps, honest that rewards are shown, not paid yet.",
   bigpicture: "A big-picture take: AI agents with wallets, inference as a commodity, where Robinhood Chain is heading, how AI model prices are moving. Backed by facts you read, not vibes.",
   mood: "The ecosystem's mood: what people on X are discussing about Orbio and its agents, the overall direction of the launchpad. Describe it, never call it. Facts only.",
@@ -49,7 +51,10 @@ export function allowedKinds(recent: ComposeKind[], roundLive: boolean): Compose
   return out.length ? out : ["explainer"];
 }
 
-/** Which kind to suggest: a saved post idea of an allowed kind first, else the least recently used allowed kind (explainers win ties). */
+/** The order ties break in: the owner wants bull posts, trends and spotlights first (2026-10-05). */
+const PRIORITY: ComposeKind[] = ["bull", "trend", "spotlight", "explainer", "tournament", "builder", "bigpicture", "mood", "poll"];
+
+/** Which kind to suggest: a saved post idea of an allowed kind first, else the least recently used allowed kind (PRIORITY breaks ties). */
 export function suggestKind(allowed: ComposeKind[], recent: ComposeKind[], ideas: { kind: string }[]): ComposeKind {
   const fromIdea = ideas.map((i) => i.kind as ComposeKind).find((k) => allowed.includes(k));
   if (fromIdea) return fromIdea;
@@ -57,7 +62,7 @@ export function suggestKind(allowed: ComposeKind[], recent: ComposeKind[], ideas
     const i = recent.indexOf(k);
     return i < 0 ? Infinity : i;
   };
-  return [...allowed].sort((a, b) => age(b) - age(a) || (a === "explainer" ? -1 : b === "explainer" ? 1 : 0))[0];
+  return [...allowed].sort((a, b) => age(b) - age(a) || PRIORITY.indexOf(a) - PRIORITY.indexOf(b))[0];
 }
 
 export function composePrompt(facts: string[], brief: string): string {
@@ -66,7 +71,7 @@ export function composePrompt(facts: string[], brief: string): string {
 Right now you are writing ONE original post for your X account. Kinds of post:
 ${ALL_KINDS.map((k) => `- ${k}: ${COMPOSE_KINDS[k]}`).join("\n")}
 
-You get the kinds allowed now, a suggested kind and your recent posts. Research first when the post needs facts you don't have (an agent's real update, what people say, a docs page). Don't repeat an angle from your recent posts. If nothing good comes out, post nothing: a weak post is worse than none.
+You get the kinds allowed now, a suggested kind and your recent posts. ALWAYS start by checking X with x_search (for example "orbio", "orbio.so", "$ORBIO", "robinhood chain agent", or an agent people are tagging): see what's new and trending in the last hours before you decide. Then research what the post needs (an agent's own posts, its Orbio record, a docs page). Don't repeat an angle from your recent posts. There is always a builder, a trend or a concept worth sharing: post something good every time. Only post nothing if your research failed completely.
 
 Format:
 - One post of at most 260 characters, or a short thread (the first post plus up to ${C.maxThread - 1} follow-ups) when a concept truly needs it.

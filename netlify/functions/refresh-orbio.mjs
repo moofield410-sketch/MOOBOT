@@ -1,4 +1,4 @@
-// Netlify scheduled function: refreshes the Orbio Masters list every 3 minutes (schedule in
+// Netlify scheduled function: refreshes the Orbio Masters list every 15 minutes (schedule in
 // netlify.toml) by calling the site's own /api/cron/scan route with CRON_SECRET.
 //
 // The Masters cache lives in the memory of the Next.js server function. This call refreshes the

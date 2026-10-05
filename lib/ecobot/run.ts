@@ -16,8 +16,8 @@ import type { Address } from "@/lib/types";
 import { canPostNow, paceCheck, publishToX } from "@/lib/xpost";
 
 /**
- * One Eco Bot run (every 15 minutes, netlify/functions/ecobot.mjs → ecobot-background.mjs →
- * /api/cron/ecobot). SERVER-SIDE ONLY. Read all of Orbio, update the bot's own price history,
+ * One Eco Bot news run (every 15 minutes, by the GitHub runner scripts/moobot.ts, or by hand
+ * through /api/cron/ecobot). SERVER-SIDE ONLY. Read all of Orbio, update the bot's own price history,
  * find signals, and, if a post may go out now and there's something new, let the editor decide.
  * Quiet runs (nothing new, or waiting for the pace) don't call the AI and cost nothing.
  */

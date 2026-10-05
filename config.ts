@@ -156,7 +156,8 @@ export const GATEWAY = {
   keyEnv: "ORBIO_API_KEY",
   /** ORBIO_GATEWAY_BASE_URL (server-only) overrides this, so tests and local checks can use a stub. */
   baseUrl: (typeof process !== "undefined" && process.env.ORBIO_GATEWAY_BASE_URL) || "https://api.orbio.so/api/v1",
-  timeoutMs: 25_000,
+  /** Per request. ORBIO_GATEWAY_TIMEOUT_MS raises it where there's no 60-second limit (the GitHub runner). */
+  timeoutMs: (typeof process !== "undefined" && Number(process.env.ORBIO_GATEWAY_TIMEOUT_MS)) || 25_000,
   chat: {
     env: "MOOBOT_CHAT",
     model: "anthropic/claude-haiku-4.5",
@@ -215,7 +216,7 @@ export const ECOBOT = {
   minGapMinutes: 30,
   /** Engineering limits for one run, so it can't loop forever. Not a cap on posts. */
   maxToolCalls: 6,
-  budgetMs: 45_000,
+  budgetMs: (typeof process !== "undefined" && Number(process.env.ECO_BOT_JOB_MS)) || 45_000,
   /** Signals (lib/ecobot/signals.ts). */
   floorUsd: 25_000,
   move1hPct: 25,
@@ -265,7 +266,7 @@ export const ECOBOT = {
    * Every job's run must fit the route's 60 seconds, counted from when the route started (loading
    * Orbio's agents and the live facts comes out of it too), with room to save its records.
    */
-  jobBudgetMs: 42_000,
+  jobBudgetMs: (typeof process !== "undefined" && Number(process.env.ECO_BOT_JOB_MS)) || 42_000,
   mentions: {
     /** Posts read per mentions poll (X sends at least 5; charged once per UTC day each). */
     readLimit: 20,
@@ -286,9 +287,10 @@ export const ECOBOT = {
   },
   compose: {
     /** At least this long between two composed posts (the shared minGapMinutes still applies too). */
-    gapMinutes: 75,
-    perDay: 12,
-    maxToolCalls: 5,
+    /** The owner wants MooBot active all day (2026-10-05): the shared 30-minute pace is the real limit. */
+    gapMinutes: 30,
+    perDay: 40,
+    maxToolCalls: 6,
     maxThread: 4,
     maxTokens: 1_200,
     temperature: 0.8,
@@ -296,6 +298,8 @@ export const ECOBOT = {
     perThreadPartMaxCost: 0.0175,
   },
   study: {
+    /** One study session per slot of this many minutes (each run checks; the GitHub runner runs every 15). */
+    everyMinutes: 15,
     /** No spending limit (the owner's choice, 2026-10-05: research is not capped). Spend is recorded for Status. */
     maxToolCalls: 10,
     /** The notes are one JSON answer: 1,500 tokens cut the first live session's off mid-way. Kept short (see studyPrompt) so it also fits the time limit. */

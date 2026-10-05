@@ -9,7 +9,7 @@ import { errorMessage, reportError } from "@/lib/monitoring";
 import { callTool } from "@/lib/orbio-gateway";
 
 /**
- * The study job: once an hour MooBot researches one topic (in rotation) and writes what it learned
+ * The study job: every ECOBOT.study.everyMinutes MooBot researches one topic (in rotation) and writes what it learned
  * into its memory: facts with sources, lessons about what works on X, post ideas, mistakes. One
  * session in the rotation reviews how its own recent posts did. SERVER-SIDE ONLY. It posts nothing.
  * It runs in preview too (learning is the point of preview). There is no spending limit (the
@@ -21,6 +21,7 @@ const TOOLS: ToolName[] = ["orbio_find", "orbio_agent", "orbio_chart", "x_posts"
 
 export const STUDY_TOPICS = {
   "orbio-protocol": "What changed at Orbio: read @orbiodotso's latest posts and Orbio's protocol, launchpad and docs pages (orbio.so/protocol, orbio.so/launchpad, orbio.so/launchpad/whitepaper). New features, fee settings, CREDIT market, staking.",
+  "orbio-x-trends": "What's trending on X across the Orbio ecosystem right now: search X for Orbio, $ORBIO, CREDIT, the launchpad and the agents people tag. Who is building what, which projects people are excited about, what newcomers ask, what the mood is. Note the good projects worth a spotlight.",
   "launchpad-agents": "The agents on Orbio's launchpad: the biggest, the newest, the ones near graduation. What do the best ones actually do? Read their own X posts. Find one worth a spotlight.",
   "robinhood-chain": "Robinhood Chain: news about the chain, Stock Tokens, USDG, Robinhood Agents, DeFi apps on it, what builders are shipping.",
   "ai-models": "The AI model market: new model releases, price changes, what agents use. What's the cheapest way to reach frontier models, and how does Orbio's CREDIT compare?",
@@ -32,8 +33,15 @@ export const STUDY_TOPICS = {
 export type StudyTopic = keyof typeof STUDY_TOPICS;
 const TOPICS = Object.keys(STUDY_TOPICS) as StudyTopic[];
 
-/** The topic for this hour: a fixed rotation through the day. */
-export const topicFor = (now: number): StudyTopic => TOPICS[Math.floor(now / 3_600_000) % TOPICS.length];
+const slotOf = (now: number) => Math.floor(now / (C.everyMinutes * 60_000));
+
+/** The topic for this slot: a fixed rotation, with the X trends every other session (they change fastest). */
+export const topicFor = (now: number): StudyTopic => {
+  const slot = slotOf(now);
+  if (slot % 2 === 0) return "orbio-x-trends";
+  const rest = TOPICS.filter((t) => t !== "orbio-x-trends");
+  return rest[Math.floor(slot / 2) % rest.length];
+};
 
 export function studyPrompt(facts: string[], brief: string): string {
   return `${persona(facts, brief)}
@@ -62,6 +70,7 @@ export interface StudyReport {
 }
 
 interface StudyState {
+  /** The last study slot (see slotOf). Named lastHour from when sessions were hourly. */
   lastHour: string | null;
   sessions: { at: string; topic: string; summary: string; research: string[] }[];
 }
@@ -93,9 +102,9 @@ export async function runStudy(opts: { now?: () => number; deadline?: number; de
   const report: StudyReport = { note: "", topic: null, summary: null, learned: 0, error: null };
   if (mode === "off") return { ...report, note: "off" };
   if (!jobEnabled("study")) return { ...report, note: "study is switched off (ECO_BOT_JOBS)" };
-  const hour = new Date(start).toISOString().slice(0, 13);
+  const slot = String(slotOf(start));
   const state: StudyState = { lastHour: null, sessions: [], ...(await kvGet<StudyState>(K.study)) };
-  if (!opts.topic && state.lastHour === hour) return { ...report, note: "already studied this hour" };
+  if (!opts.topic && state.lastHour === slot) return { ...report, note: "already studied in this slot" };
   if (!(await takeLock("study", start))) return { ...report, note: "another run is still working" };
 
   const deps: ToolDeps = { ...opts.deps, now: clock };
@@ -129,7 +138,7 @@ export async function runStudy(opts: { now?: () => number; deadline?: number; de
       report.note = `studied ${topic}: ${report.learned} new notes`;
     }
     state.sessions = [{ at: new Date(start).toISOString(), topic, summary: report.summary ?? report.note, research: loop.research }, ...state.sessions].slice(0, 24);
-    state.lastHour = hour;
+    state.lastHour = slot;
   } catch (err) {
     report.error = errorMessage(err);
     report.note = "failed";
