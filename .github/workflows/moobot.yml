@@ -5,8 +5,9 @@
 #
 # Set up once, in the repo's Settings → Secrets and variables → Actions:
 #   Secrets:   ORBIO_API_KEY, NETLIFY_SITE_ID, NETLIFY_BLOBS_TOKEN (a Netlify personal access token)
+#   Secrets (optional): RPC_URL (it holds provider keys, so never as a variable)
 #   Variables: ECO_BOT (on / preview / off), AUTO_POST (on / preview / off), MOOBOT_TOKEN_ADDRESS,
-#              SITE_URL (https://moofield.lol), optional ECO_BOT_JOBS, RPC_URL
+#              SITE_URL (https://moofield.lol), optional ECO_BOT_JOBS
 # Run it by hand from the Actions tab ("Run workflow") to try it.
 #
 # No wallet, no chain writes.
@@ -52,7 +53,7 @@ jobs:
           ECO_BOT_JOBS: ${{ vars.ECO_BOT_JOBS }}
           AUTO_POST: ${{ vars.AUTO_POST }}
           MOOBOT_TOKEN_ADDRESS: ${{ vars.MOOBOT_TOKEN_ADDRESS }}
-          RPC_URL: ${{ vars.RPC_URL }}
+          RPC_URL: ${{ secrets.RPC_URL }}
           # The fixed posts link images on the site (the Bloom Pop board).
           URL: ${{ vars.SITE_URL }}
           # No 60-second limit here: a job may think for up to 4 minutes, a model call for 90 seconds.
