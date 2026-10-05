@@ -71,7 +71,10 @@ const FAQ: FaqItem[] = [
     q: "When does voting open?",
     a: `In every round, from the Tournament's unlock (${UNLOCK}) on. Each vote is a free signed message: no gas, nothing leaves your wallet.`,
   },
-  { q: "Who can vote?", a: `Wallets holding at least the voting minimum (currently ${VOTING.minOrbio.toLocaleString("en-US")} $ORBIO, configurable) at the round's snapshot block.` },
+  {
+    q: "Who can vote?",
+    a: `Wallets holding ${VOTING.minOrbio.toLocaleString("en-US")}+ $ORBIO at the round's snapshot block, or ${VOTING.moobotPerPoint.toLocaleString("en-US")}+ $MOOBOT: every ${VOTING.moobotPerPoint.toLocaleString("en-US")} $MOOBOT is one vote point, counted at the round's end, so selling lowers your vote.`,
+  },
   { q: "Does tapping MooBot do anything?", a: "He flexes. That's all: it's just for fun and never gives anything of value." },
 ];
 

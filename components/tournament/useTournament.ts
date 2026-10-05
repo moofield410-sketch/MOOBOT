@@ -17,8 +17,12 @@ export interface TournamentMe {
   address: Address;
   round: RoundState;
   isModerator: boolean;
-  power: { balance: number; power: number; block: string; method: "direct" | "transfers" } | null;
+  /** power: $ORBIO power at the snapshot plus $MOOBOT points held now. */
+  power: { balance: number; orbioPower: number; power: number; block: string; method: "direct" | "transfers" } | null;
   powerError: string | null;
+  /** $MOOBOT held now (1 point per VOTING.moobotPerPoint), or null when it can't be read. */
+  moobot: { balance: number; points: number } | null;
+  isTeam: boolean;
   vote: { pitchId: string; power: number; castAt: string } | null;
   agents: { agentId: string; name: string; ticker: string | null; token: Address; logoUrl: string | null; pitchId: string | null; pitchHidden: boolean }[] | null;
   agentsError: string | null;

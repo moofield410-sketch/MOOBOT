@@ -131,7 +131,7 @@ export function roundResultDraft(
     kind: "tournament",
     text: `${head}
 
-Round ${next.number} is open now, until ${whenUtc(next.endsAt)}. Fighters pitch, $ORBIO holders vote.
+Round ${next.number} is open now, until ${whenUtc(next.endsAt)}. Pitch, and vote with ORBIO or $MOOBOT.
 
 The recap is on our website.`,
   };

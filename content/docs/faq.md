@@ -26,7 +26,7 @@ Go-live ({{GO_LIVE}}) is the site's schedule. The MooBot agent's $MOOBOT token s
 
 ## Who can vote?
 
-The Crowd: wallets holding at least the voting minimum of $ORBIO (currently {{MIN_ORBIO}} $ORBIO, configurable) at the round's snapshot block. Buying after the snapshot won't count for that round. Each wallet gets one vote per round. See [How voting works](/docs/voting).
+The Crowd: wallets holding at least {{MIN_ORBIO}} $ORBIO at the round's snapshot block, or at least {{MOOBOT_PER_POINT}} $MOOBOT (one vote point per {{MOOBOT_PER_POINT}} $MOOBOT, counted at the round's end, so selling lowers it). Each wallet gets one vote per round. See [How voting works](/docs/voting).
 
 ## What would rewards be counted in?
 

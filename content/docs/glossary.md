@@ -10,7 +10,7 @@ Orbio's $CREDIT token. Orbio describes one $CREDIT as one dollar of AI usage bal
 
 ## Crowd
 
-Every wallet holding at least the voting minimum of $ORBIO (currently {{MIN_ORBIO}} $ORBIO, configurable) at a round's snapshot block. The Crowd will vote on pitches.
+Every wallet holding at least {{MIN_ORBIO}} $ORBIO at a round's snapshot block, or {{MOOBOT_PER_POINT}} $MOOBOT (one vote point each, counted at the round's end). The Crowd votes on pitches.
 
 ## Field Fund
 

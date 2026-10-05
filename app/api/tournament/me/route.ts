@@ -6,7 +6,8 @@ import { logoPath } from "@/lib/safe-url";
 import { currentRound } from "@/lib/rounds";
 import { TournamentError } from "@/lib/tournament/rules";
 import { allow, clientIp } from "@/lib/rate-limit";
-import { defaultDeps, ledger, powerFor, powerKnown } from "@/lib/tournament/service";
+import { teamWallets } from "@/lib/tournament/herd";
+import { defaultDeps, herdNow, ledger, powerFor, powerKnown } from "@/lib/tournament/service";
 import { readRound } from "@/lib/tournament/store";
 import type { Address } from "@/lib/types";
 
@@ -48,7 +49,9 @@ export async function GET(req: Request) {
   // connection (a voter needs one or two), unless the wallet is signed in as itself.
   const fresh = live && !(await powerKnown(round.number, address).catch(() => false));
   const tooMany = fresh && !same(session, address) && !allow(`power:${clientIp(req)}`, FRESH_POWER_READS, FRESH_POWER_WINDOW_MS);
-  const [doc, power, agents, masters, entries] = await Promise.all([
+  // $MOOBOT now: one cheap read, still limited per connection unless signed in as this wallet.
+  const herdAllowed = live && (same(session, address) || allow(`herd:${clientIp(req)}`, 60, FRESH_POWER_WINDOW_MS));
+  const [doc, power, agents, masters, entries, herd, team] = await Promise.all([
     live ? readRound(round.number) : Promise.resolve(null),
     !live
       ? Promise.resolve({ value: null, error: null })
@@ -58,7 +61,10 @@ export async function GET(req: Request) {
     settle(deps.agentsOf(address)),
     settle(deps.masters()),
     settle(ledger(address, deps)),
+    herdAllowed ? settle(herdNow(deps, address)) : Promise.resolve({ value: null, error: null }),
+    teamWallets().catch(() => new Set<string>()),
   ]);
+  const points = herd.value?.points ?? 0;
 
   const hidden = new Set(doc?.hidden.map((h) => h.pitchId) ?? []);
   const vote = doc?.votes.find((v) => v.wallet === address) ?? null;
@@ -69,9 +75,14 @@ export async function GET(req: Request) {
       address,
       round,
       isModerator,
-      power: power.value ? { balance: power.value.balance, power: power.value.power, block: power.value.block, method: power.value.method } : null,
+      // power = $ORBIO power at the snapshot + $MOOBOT points held now (what the board counts).
+      power: power.value
+        ? { balance: power.value.balance, orbioPower: power.value.power, power: power.value.power + points, block: power.value.block, method: power.value.method }
+        : null,
       powerError: power.error,
-      vote: vote ? { pitchId: vote.pitchId, power: vote.power, castAt: vote.castAt } : null,
+      moobot: herd.value ? { balance: herd.value.balance, points } : null,
+      isTeam: team.has(address),
+      vote: vote ? { pitchId: vote.pitchId, power: vote.power + points, castAt: vote.castAt } : null,
       agents: agents.value?.filter((a) => same(a.owner, address) || same(a.agentWallet, address)).map((a) => {
         const pitch = doc?.pitches.find((p) => p.agentId === a.agentId);
         return {

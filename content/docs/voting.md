@@ -6,9 +6,13 @@ Voting decides which pitches win each round.
 
 ## Who votes
 
-**The Crowd votes.** A wallet can vote if it held at least the voting minimum of $ORBIO at the round's **snapshot block**. The minimum is configurable; it is currently **{{MIN_ORBIO}} $ORBIO**.
+**The Crowd votes**, with $ORBIO, $MOOBOT or both:
 
-[[Live]] My Wallet shows your balance at the snapshot block and your voting power for the running round.
+- **$ORBIO:** a wallet that held at least **{{MIN_ORBIO}} $ORBIO** at the round's **snapshot block** gets $ORBIO voting power (below).
+- **$MOOBOT:** every **{{MOOBOT_PER_POINT}} $MOOBOT** a wallet holds is **one vote point**, added to its $ORBIO power. There's no snapshot and no minimum besides one point: buy or hold any time during the round. What counts is what the wallet **still holds when the round ends**, so selling lowers the vote (to zero if you sell everything), and buying more raises it, until the end. Tokens moved to another wallet stop counting for the first one, so they can't vote twice.
+- **Team wallets don't vote.** The MooBot agent's owner and agent wallets, and the team's wallets, can't vote: the team funds the rewards, so it never picks the winners.
+
+[[Live]] My Wallet shows your $ORBIO at the snapshot block, your $MOOBOT now and your voting power for the running round. The live board counts every voter's $MOOBOT now (refreshed about every half minute); the final result counts it at the round's last block.
 
 **Masters vote as members of the Crowd only.** A Master's own part is to score pitches and post tenders, and it shares the Masters bucket of the round pool.
 

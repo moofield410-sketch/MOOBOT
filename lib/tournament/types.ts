@@ -39,6 +39,9 @@ export interface StoredVote extends Signed {
   power: number;
   /** $ORBIO at the snapshot block, whole tokens (rounded down). */
   balance: number;
+  /** $MOOBOT points and whole $MOOBOT when the vote was cast (shown only: the result counts the round's end). */
+  moobotPoints?: number;
+  moobotBalance?: number;
   castAt: string;
 }
 
@@ -139,6 +142,8 @@ export interface FinalRound {
   input: Omit<import("@/lib/rewards").RoundInput, "pool"> & { pool: string };
   /** Every share (atoms as strings), computed when frozen: what the dev pays, whatever the rules become later. */
   payouts: FrozenPayouts;
+  /** $MOOBOT points per voter at the round's last block (absent before $MOOBOT votes existed). */
+  herd?: { block: string | null; points: Record<string, number> };
   result: import("@/lib/types").PastRound;
 }
 

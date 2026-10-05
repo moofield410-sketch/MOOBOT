@@ -58,11 +58,12 @@ export function VoteButton({ pitchId, title, ownAgentId, live = true }: { pitchI
       <p className="rounded-xl border border-line px-3 py-2 text-center text-xs text-soil/70">You already voted this round</p>
     );
   }
+  if (m.isTeam) return <p className="rounded-xl border border-line px-3 py-2 text-center text-xs text-soil/70">Team wallets don&apos;t vote: the team funds the rewards</p>;
   if (!m.power) return <p className="text-xs text-moss">{m.powerError ?? "Couldn't read your voting power."}</p>;
   if (m.power.power <= 0) {
     return (
       <p className="rounded-xl border border-line px-3 py-2 text-center text-xs text-soil/75">
-        You held {formatCompact(m.power.balance)} $ORBIO at the snapshot. Voting needs {VOTING.minOrbio.toLocaleString("en-US")}.
+        No vote yet: hold {VOTING.minOrbio.toLocaleString("en-US")}+ $ORBIO at the snapshot, or {VOTING.moobotPerPoint.toLocaleString("en-US")}+ $MOOBOT (1 point each {VOTING.moobotPerPoint.toLocaleString("en-US")}).
       </p>
     );
   }
@@ -76,6 +77,9 @@ export function VoteButton({ pitchId, title, ownAgentId, live = true }: { pitchI
           <p>
             Vote for <span className="font-semibold">&ldquo;{title}&rdquo;</span> with power <span className="font-mono font-semibold">{formatCompact(m.power.power)}</span>?
             Your first vote in a round is final.
+            {m.moobot && m.moobot.points > 0 && (
+              <> Your {formatCompact(m.moobot.points)} $MOOBOT points count what you still hold when the round ends: sell, and they go down.</>
+            )}
           </p>
           <div className="mt-2.5 flex gap-2">
             <button type="button" disabled={vote.busy} onClick={() => vote.send(m.round.number, { Pitch: pitchId })} className="btn-primary flex-1 px-3 py-2 text-xs">

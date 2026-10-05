@@ -98,7 +98,7 @@ export default async function LeaderboardPage() {
 
             <Card title="Top voters">
               {board.data.voters.length === 0 ? (
-                <p className="text-sm text-soil/80">No votes yet. Holders of {formatInt(VOTING.minOrbio)}+ $ORBIO at the snapshot can vote on any pitch; the first ones show up here.</p>
+                <p className="text-sm text-soil/80">No votes yet. Holders of {formatInt(VOTING.minOrbio)}+ $ORBIO at the snapshot or {formatInt(VOTING.moobotPerPoint)}+ $MOOBOT can vote on any pitch; the first ones show up here.</p>
               ) : (
               <div className="-mx-3 overflow-x-auto">
                 <table className="w-full min-w-[22rem] text-sm">

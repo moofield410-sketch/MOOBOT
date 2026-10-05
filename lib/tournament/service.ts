@@ -1,5 +1,5 @@
 import { verifyMessage, type Hex } from "viem";
-import { CONTRACTS, CREDIT_DECIMALS, REWARDS, TOURNAMENT } from "@/config";
+import { CONTRACTS, CREDIT_DECIMALS, REWARDS, TOURNAMENT, VOTING } from "@/config";
 import { sessionSecret } from "@/lib/auth/session";
 import { getCredits } from "@/lib/credits";
 import { kvMode } from "@/lib/kv";
@@ -29,6 +29,7 @@ import {
   TournamentError,
 } from "@/lib/tournament/rules";
 import { balanceAtSnapshot, findSnapshotBlock, powerOf, viemSnapshotChain, type SnapshotChain } from "@/lib/tournament/snapshot";
+import { finalHerd, moobotToken, pointsNow, teamWallets, withHerd } from "@/lib/tournament/herd";
 import { freezeFinal, readFinal, readPower, readRound, readTenders, updateRound, updateTenders, writePower } from "@/lib/tournament/store";
 import type { FinalRound, PowerRecord, RoundDoc, StoredPitch, StoredScore, StoredTender, StoredVote } from "@/lib/tournament/types";
 import type { Address, Master, PastRound } from "@/lib/types";
@@ -51,6 +52,10 @@ export interface TournamentDeps {
   moderators(): Address[];
   /** 80% of all $CREDIT received, before payouts (tests give a fixed one). Default: from Orbio. */
   grossTreasury?: () => Promise<bigint | null>;
+  /** The $MOOBOT contract for $MOOBOT votes (default: MOOBOT_TOKEN_ADDRESS), null for none. */
+  moobotToken?: () => Address | null;
+  /** Wallets that can't vote (default: the MooBot agent's owner and agent wallet, and TEAM_WALLETS). */
+  team?: () => Promise<Set<string>>;
 }
 
 /** Checks a signature offline first (normal wallets); smart-contract wallets are checked on chain. */
@@ -191,6 +196,14 @@ function rememberZero(r: PowerRecord): void {
   if (zeroPower.size > 50_000) for (const k of [...zeroPower.keys()].slice(0, 10_000)) zeroPower.delete(k);
 }
 
+/** A wallet's $MOOBOT now: whole tokens and vote points. Zero when $MOOBOT votes aren't set up. */
+export async function herdNow(deps: TournamentDeps, wallet: Address): Promise<{ balance: number; points: number }> {
+  const token = (deps.moobotToken ?? moobotToken)();
+  const chain = deps.chain();
+  if (!token || !chain) return { balance: 0, points: 0 };
+  return pointsNow(chain, token, wallet);
+}
+
 /** Whether a wallet's power for a round is already known (no chain read needed to answer). */
 export async function powerKnown(round: number, wallet: Address): Promise<boolean> {
   return zeroPower.has(`${round}:${wallet.toLowerCase()}`) || (await readPower(round, wallet)) !== null;
@@ -249,14 +262,24 @@ export async function castVote(deps: TournamentDeps, message: unknown, signature
   // Cheap checks first, so nobody waits for a chain read only to be refused.
   const before = await readRound(round.number);
   applyVote(before, { round: round.number, wallet: action.address, pitchId: action.fields.Pitch, power: 1, balance: 0, castAt: "", message: msg, signature: sig });
+  const team = await (deps.team ?? teamWallets)();
+  if (team.has(action.address.toLowerCase())) refuse("Team wallets can't vote: the team funds the rewards, so it never picks the winners.", 403);
   const power = await powerFor(deps, action.address, round);
-  if (power.power <= 0) refuse(`This wallet held ${power.balance.toLocaleString("en-US")} $ORBIO at the snapshot block, under the voting minimum.`, 403);
+  const herd = await herdNow(deps, action.address);
+  if (power.power <= 0 && herd.points <= 0) {
+    refuse(
+      `This wallet held ${power.balance.toLocaleString("en-US")} $ORBIO at the snapshot block (under the ${VOTING.minOrbio.toLocaleString("en-US")} minimum) and holds under ${VOTING.moobotPerPoint.toLocaleString("en-US")} $MOOBOT now, so it has no vote yet.`,
+      403,
+    );
+  }
   const vote: StoredVote = {
     round: round.number,
     wallet: action.address,
     pitchId: action.fields.Pitch,
     power: power.power,
     balance: power.balance,
+    moobotPoints: herd.points,
+    moobotBalance: herd.balance,
     castAt: new Date(deps.now()).toISOString(),
     message: msg,
     signature: sig,
@@ -436,11 +459,18 @@ export async function pastRounds(deps: TournamentDeps = defaultDeps): Promise<Fi
       .filter((f): f is FinalRound => f !== null && f.round < v.times.number && f.round >= v.times.number - REWARDS.repeatWinner.rounds)
       .flatMap((f) => (f.result.top ?? []).map((x) => x.id.replace(/^r\d+-/, "")));
     const roundMasters: RoundMaster[] = masters.map((m) => ({ id: m.tokenAddress, agentId: m.orbioAgentId ?? "", ownerWallet: m.ownerWallet }));
-    const input = roundInput(v.doc, plan.pool, tenders, roundMasters, recentTop3);
+    // $MOOBOT votes count what each voter held at the round's last block: wait until that's readable.
+    const herd = await finalHerd(v.doc, v.times.endsAt, deps.chain(), (deps.moobotToken ?? moobotToken)());
+    if (!herd) {
+      finals.push(null);
+      continue;
+    }
+    const doc = withHerd(v.doc, herd.points);
+    const input = roundInput(doc, plan.pool, tenders, roundMasters, recentTop3);
     const payouts = computeRoundPayouts(input);
     const allocated = totalAllocated(payouts);
     const funding = fundingOf(plan, allocated);
-    const result = pastRoundOf(v.doc, v.times, asCredits(plan.pool));
+    const result = pastRoundOf(doc, v.times, asCredits(plan.pool));
     const final: FinalRound = {
       round: v.times.number,
       frozenAt: new Date(deps.now()).toISOString(),
@@ -452,6 +482,7 @@ export async function pastRounds(deps: TournamentDeps = defaultDeps): Promise<Fi
       fromTreasuryAtoms: funding.fromTreasury.toString(),
       fromDevAtoms: funding.fromDev.toString(),
       input: { ...input, pool: input.pool.toString() },
+      herd: { block: herd.block, points: Object.fromEntries(herd.points) },
       // Every share, as computed now: the ledger reads these, so later rule changes never move them.
       payouts: {
         pitches: payouts.pitches.map((x) => ({ pitchId: x.pitchId, amount: x.amount.toString() })),
@@ -489,7 +520,8 @@ export async function ledger(wallet: Address, deps: TournamentDeps = defaultDeps
     const f = byRound.get(v.times.number);
     const input = f ? { ...f.input, pool: BigInt(f.input.pool) } : null;
     const owners = new Map((input?.masters ?? []).map((m) => [m.id as string, m.ownerWallet as string]));
-    entries.push(...ledgerFor(wallet, v.doc, input, owners, f?.payouts ?? null));
+    const doc = f?.herd ? withHerd(v.doc, new Map(Object.entries(f.herd.points))) : v.doc;
+    entries.push(...ledgerFor(wallet, doc, input, owners, f?.payouts ?? null));
   }
   return entries.sort((a, b) => b.round - a.round);
 }

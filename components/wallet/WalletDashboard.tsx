@@ -146,12 +146,16 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Voting eligibility" meta={balances.data ? { updatedAt: balances.data.updatedAt, stale: balances.data.stale } : undefined}>
           <dl>
-            <StatRow label="Minimum" value={`${VOTING.minOrbio.toLocaleString("en-US")} $ORBIO at the snapshot`} />
+            <StatRow label="Who votes" value={`${VOTING.minOrbio.toLocaleString("en-US")}+ $ORBIO at the snapshot, or ${VOTING.moobotPerPoint.toLocaleString("en-US")}+ $MOOBOT`} />
             <StatRow label={live ? `Round ${t!.round.number} snapshot` : "Round 1 snapshot"} value={snapshotText()} />
             {live && t?.power ? (
               <>
-                <StatRow label="Your $ORBIO at the snapshot" value={t.power.balance.toLocaleString("en-US")} />
-                <StatRow label="Your voting power" value={t.power.power > 0 ? t.power.power.toLocaleString("en-US") : "None (below the minimum)"} />
+                <StatRow label="Your $ORBIO at the snapshot" value={`${t.power.balance.toLocaleString("en-US")} · power ${t.power.orbioPower.toLocaleString("en-US")}`} />
+                <StatRow
+                  label="Your $MOOBOT now"
+                  value={t.moobot ? `${t.moobot.balance.toLocaleString("en-US")} · ${t.moobot.points.toLocaleString("en-US")} points` : "n/a"}
+                />
+                <StatRow label="Your voting power" value={t.power.power > 0 ? t.power.power.toLocaleString("en-US") : "None yet"} />
               </>
             ) : (
               <StatRow
@@ -164,10 +168,12 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
           <p className="mt-4 text-sm text-soil/80">
             {live && t?.power
               ? t.vote
-                ? "Your vote is in. The first vote in a round is final."
+                ? t.moobot && t.moobot.points > 0
+                  ? "Your vote is in. Its $MOOBOT points count what you still hold when the round ends: sell, and they go down."
+                  : "Your vote is in. The first vote in a round is final."
                 : t.power.power > 0
                   ? "You can vote once this round: pick a pitch on the Tournament board."
-                  : "You can't vote this round. Voting power comes from your balance at the snapshot block, so buying now counts from the next round."
+                  : `No vote yet this round. $ORBIO counts from the snapshot block, but $MOOBOT counts any time: hold ${VOTING.moobotPerPoint.toLocaleString("en-US")}+ $MOOBOT to vote now.`
               : live && t?.powerError
                 ? t.powerError
                 : snapshotTaken

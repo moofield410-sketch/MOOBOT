@@ -121,7 +121,7 @@ export function applyVote(doc: RoundDoc, v: StoredVote): RoundDoc {
   if (same(pitch.fighterOwner, v.wallet) || same(pitch.fighterAgentWallet, v.wallet) || same(pitch.submittedBy, v.wallet)) {
     refuse("You can't vote for your own agent's pitch.", 403);
   }
-  if (!(v.power > 0)) refuse("This wallet has no voting power in this round.", 403);
+  if (!(v.power > 0) && !((v.moobotPoints ?? 0) > 0)) refuse("This wallet has no voting power in this round.", 403);
   return { ...doc, votes: [...doc.votes, v] };
 }
 

@@ -402,6 +402,15 @@ export const VOTING = {
   powerCap: 100_000,
   /** CONFIRM: optional $MOOBOT holder vote bonus (multiplier; 1 = no bonus). */
   moobotHolderBonus: 1,
+  /**
+   * $MOOBOT votes too (the owner's rule, 2026-10-05): every this many whole $MOOBOT is one vote
+   * point, added to the wallet's $ORBIO power. No snapshot and no minimum besides one point: what
+   * counts is what the wallet still holds when the round ends, so selling lowers a vote (to zero
+   * when everything is sold) and buying more raises it, until the end.
+   */
+  moobotPerPoint: 1_000,
+  /** TEAM_WALLETS (comma-separated): team wallets that can't vote, besides the MooBot agent's owner and agent wallet. */
+  teamWalletsEnv: "TEAM_WALLETS",
 } as const;
 
 // ---------------------------------------------------------------------------

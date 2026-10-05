@@ -5,6 +5,7 @@ import { SAMPLE_PAST_ROUNDS, SAMPLE_PITCHES, SAMPLE_TENDERS, SAMPLE_VOTERS } fro
 import { serverTimeline } from "@/lib/timeline.server";
 import { rankBoard, rankVotersOf, toTender, type RankedPitch } from "@/lib/tournament/results";
 import { defaultDeps, pastRounds, startedRounds } from "@/lib/tournament/service";
+import { liveHerd, withHerd } from "@/lib/tournament/herd";
 import { readTenders } from "@/lib/tournament/store";
 import type { Snapshot } from "@/lib/tournament/types";
 import type { DataEnvelope, Leaderboard, PastRound, Pitch, Tender, VoterRank } from "@/lib/types";
@@ -61,14 +62,16 @@ async function loadState(): Promise<TournamentState> {
   const [{ current, rounds }, tendersDoc, { past, views }] = await Promise.all([startedRounds(defaultDeps), readTenders(), pastRounds(defaultDeps)]);
   const live = rounds.find((r) => r.times.number === current.number && current.status === "live") ?? null;
   const docs = rounds.map((r) => r.doc);
+  // The live board adds each voter's $MOOBOT points right now (sell, and the vote shrinks).
+  const liveDoc = live ? withHerd(live.doc, await liveHerd(live.doc, defaultDeps.chain()).catch(() => new Map<string, number>())) : null;
   const tenders = tendersDoc.tenders
     .map((t) => toTender(t, docs, now))
     .sort((a, b) => (a.status === b.status ? a.deadline.localeCompare(b.deadline) : a.status === "open" ? -1 : 1));
   return {
     round: current,
     snapshot: live?.doc.snapshot ?? null,
-    pitches: live ? rankBoard(live.doc, false) : [],
-    voters: live ? rankVotersOf(live.doc, past, views.map((v) => v.doc)) : [],
+    pitches: liveDoc ? rankBoard(liveDoc, false) : [],
+    voters: liveDoc ? rankVotersOf(liveDoc, past, views.map((v) => v.doc)) : [],
     tenders,
     past: [...past].sort((a, b) => b.number - a.number),
     hiddenCount: live?.doc.hidden.length ?? 0,

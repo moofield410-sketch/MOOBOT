@@ -176,6 +176,7 @@ export function docVars(): Record<string, string> {
     AURA_TIERS: HOLDER_AURA_TIERS.map((a) => `${a.name} (${int(a.minMooBot)}+)`).join(", "),
     REWARDS_WORKED_EXAMPLE: rewardsWorkedExample(),
     SPLIT_EXAMPLE: splitExample(),
+    MOOBOT_PER_POINT: int(VOTING.moobotPerPoint),
     ORBIO_DOCS: ORBIO_LINKS.docs,
     ORBIO_TERMS: ORBIO_LINKS.liveTerms,
   };

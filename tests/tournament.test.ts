@@ -336,7 +336,7 @@ describe("Tournament actions", () => {
     await castVote(s.deps, ...(await signed(s.voters[1], "vote", { Pitch: p2.id }, { at: now })));
     await castVote(s.deps, ...(await signed(s.voters[2], "vote", { Pitch: p2.id }, { at: now })));
     // Below the minimum.
-    await rejects(castVote(s.deps, ...(await signed(s.voters[5], "vote", { Pitch: p1.id }, { at: now }))), 403, /under the voting minimum/);
+    await rejects(castVote(s.deps, ...(await signed(s.voters[5], "vote", { Pitch: p1.id }, { at: now }))), 403, /no vote yet/);
     // Your own agent's pitch.
     await rejects(castVote(s.deps, ...(await signed(s.fighter, "vote", { Pitch: p1.id }, { at: now }))), 403, /own agent/);
 
@@ -699,5 +699,70 @@ describe("Paid rounds: frozen results, 60% pool and the dev's floor", () => {
     const v = await pastRounds(deps);
     assert.equal(v.finals[0], null);
     assert.equal(v.past[0].poolCredits, null);
+  });
+});
+
+describe("$MOOBOT votes: hold to vote, sell and it shrinks", () => {
+  const MOO = "0x388785c9fe745142a24ab4eaf64013d3d11a4e71" as Address;
+  const C = (n: number) => BigInt(n) * 1_000_000n;
+
+  /** setup() with a $MOOBOT ledger beside the $ORBIO one: balances by wallet from a block on. */
+  function herdSetup() {
+    const s = setup();
+    const moo: { wallet: string; from: bigint; whole: number }[] = [];
+    const base = s.fc.chain;
+    const chain: SnapshotChain = {
+      ...base,
+      async balanceAt(token, owner, block) {
+        if (token.toLowerCase() !== MOO) return base.balanceAt(token, owner, block);
+        const hit = moo.filter((m) => m.wallet === owner.toLowerCase() && m.from <= block).sort((a, b) => Number(b.from - a.from))[0];
+        return BigInt(hit?.whole ?? 0) * E18;
+      },
+    };
+    const deps: TournamentDeps = { ...s.deps, chain: () => chain, moobotToken: () => MOO, team: async () => new Set([lc(s.masterOwner)]), grossTreasury: async () => C(100) };
+    /** From now on (the current head), `who` holds `whole` $MOOBOT. */
+    const hold = (who: PrivateKeyAccount, whole: number) => moo.push({ wallet: lc(who), from: s.fc.blockAt(s.deps.now()), whole });
+    return { ...s, deps, hold };
+  }
+
+  it("lets a wallet with no $ORBIO vote with $MOOBOT: 1,000 $MOOBOT = 1 point", async () => {
+    const s = herdSetup();
+    const at = s.deps.now();
+    const p = await submitPitch(s.deps, ...(await signed(s.fighter, "pitch", pitchFields("101"), { at })));
+    s.hold(s.voters[5], 50_000); // voter 5 has only 10 $ORBIO
+    const v = await castVote(s.deps, ...(await signed(s.voters[5], "vote", { Pitch: p.id }, { at })));
+    assert.equal(v.power, 0, "no $ORBIO power");
+    assert.equal(v.moobotPoints, 50);
+  });
+
+  it("counts what each voter holds when the round ends: selling lowers it, and moved tokens count once", async () => {
+    const s = herdSetup();
+    const at = s.deps.now();
+    const p1 = await submitPitch(s.deps, ...(await signed(s.fighter, "pitch", pitchFields("101"), { at })));
+    const p2 = await submitPitch(s.deps, ...(await signed(s.fighter, "pitch", pitchFields("102", "Another good idea"), { at })));
+    // Voters 0-4 hold $ORBIO (power 63 to 141). Voter 0 also holds 500,000 $MOOBOT (500 points).
+    s.hold(s.voters[0], 500_000);
+    await castVote(s.deps, ...(await signed(s.voters[0], "vote", { Pitch: p1.id }, { at })));
+    for (const v of s.voters.slice(1, 5)) await castVote(s.deps, ...(await signed(v, "vote", { Pitch: p2.id }, { at })));
+    // Voter 0 then sends all its $MOOBOT to voter 5, who votes for p1 with it too.
+    s.setNow(at + 3_600_000);
+    s.hold(s.voters[0], 0);
+    s.hold(s.voters[5], 500_000);
+    await castVote(s.deps, ...(await signed(s.voters[5], "vote", { Pitch: p1.id }, { at: s.deps.now() })));
+
+    s.setNow(UNLOCK + ROUND_MS + FREEZE_AFTER_MS + 1_000);
+    const f = (await pastRounds(s.deps)).finals[0]!;
+    assert.equal(f.herd!.points[lc(s.voters[0])], 0, "sold everything: zero points");
+    assert.equal(f.herd!.points[lc(s.voters[5])], 500, "the tokens count once, in the wallet holding them at the end");
+    const p1Power = f.result.top!.find((x) => x.id === p1.id)!.votingPower;
+    assert.equal(p1Power, Math.floor(Math.sqrt(4_000)) + 500, "voter 0's $ORBIO power plus voter 5's 500 points, nothing twice");
+  });
+
+  it("refuses votes from team wallets", async () => {
+    const s = herdSetup();
+    const at = s.deps.now();
+    const p = await submitPitch(s.deps, ...(await signed(s.fighter, "pitch", pitchFields("101"), { at })));
+    s.hold(s.masterOwner, 1_000_000);
+    await rejects(castVote(s.deps, ...(await signed(s.masterOwner, "vote", { Pitch: p.id }, { at }))), 403, /Team wallets/);
   });
 });
