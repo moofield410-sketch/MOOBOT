@@ -15,7 +15,7 @@ export const DOCS: DocPage[] = [
   {
     slug: "rewards",
     title: "Rewards",
-    description: `The ${REWARDS.agentOpsPct}/${REWARDS.treasuryPct} split, the round pool and a worked example. Displayed, not paid.`,
+    description: `The ${REWARDS.agentOpsPct}/${REWARDS.treasuryPct} split, the round pool (at least ${REWARDS.roundPoolFloorCredits.toLocaleString("en-US")} $CREDIT a round) and a worked example. Paid by the team after each round.`,
   },
   { slug: "faq", title: "FAQ", description: "Short answers to common questions." },
   { slug: "glossary", title: "Glossary", description: "Every term on the site in one place." },

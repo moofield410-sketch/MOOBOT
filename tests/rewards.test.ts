@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { REWARDS } from "@/config";
 import {
+  fundingOf,
   cappedWeightedSplit,
   computeRoundPayouts,
   credits,
@@ -20,7 +21,17 @@ import {
 import type { Address } from "@/lib/types";
 
 const w = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as Address;
-const R = { ...REWARDS, roundPoolCapCredits: 40_000 };
+/**
+ * The calculator's mechanics are tested with a fixed config of their own (a 45% treasury bucket and
+ * a 100 $CREDIT minimum payout), so these tests don't move when the live rules change.
+ */
+const R = {
+  ...REWARDS,
+  roundPoolPctOfTreasury: 25,
+  roundPoolFloorCredits: 0,
+  roundSplit: { pitchesPct: 35, votersPct: 10, mastersPct: 10, treasuryPct: 45 },
+  minPayoutCredits: 100,
+} as unknown as typeof REWARDS;
 
 const pitch = (id: string, fighter: string, minute: number, owner = w(900 + minute)): RoundPitch => ({
   id,
@@ -61,25 +72,33 @@ describe("20/80 split of $CREDIT received", () => {
 });
 
 describe("round pool", () => {
-  it("is 25% of the treasury when that is under the cap", () => {
-    assert.equal(roundPool(credits(100_000), R), credits(25_000));
+  it("is 60% of the treasury when that is above the floor; the rest rolls over", () => {
+    const p = roundPool(credits(2_000));
+    assert.equal(p.share, credits(1_200));
+    assert.equal(p.devTopUp, 0n);
+    assert.equal(p.pool, credits(1_200));
   });
 
-  it("is the cap when 25% of the treasury is larger", () => {
-    assert.equal(roundPool(credits(200_000), R), credits(40_000));
+  it("is topped up by the dev to the floor when 60% is less", () => {
+    const p = roundPool(credits(100));
+    assert.equal(p.share, credits(60));
+    assert.equal(p.devTopUp, credits(40));
+    assert.equal(p.pool, credits(REWARDS.roundPoolFloorCredits));
+    assert.equal(roundPool(0n).devTopUp, credits(REWARDS.roundPoolFloorCredits), "an empty treasury: the dev funds it all");
   });
 
-  it("round 1 can never exceed the cap, however large the treasury", () => {
-    for (const treasury of [credits(160_001), credits(10_000_000), 10n ** 30n]) {
-      const pool = roundPool(treasury, R)!;
-      assert.ok(pool <= credits(R.roundPoolCapCredits));
-      const payouts = computeRoundPayouts(baseInput({ pool }), R);
-      assert.ok(totalAllocated(payouts) + payouts.toTreasury <= credits(R.roundPoolCapCredits));
-    }
+  it("the treasury pays first, the dev only what was really awarded beyond its share", () => {
+    const p = roundPool(credits(100));
+    assert.deepEqual(fundingOf(p, credits(100)), { fromTreasury: credits(60), fromDev: credits(40) });
+    assert.deepEqual(fundingOf(p, credits(50)), { fromTreasury: credits(50), fromDev: 0n }, "a half-used pool costs the dev nothing");
+    assert.deepEqual(fundingOf(p, 0n), { fromTreasury: 0n, fromDev: 0n });
   });
 
-  it("is n/a (null) while the cap is not set", () => {
-    assert.equal(roundPool(credits(1_000), { ...REWARDS, roundPoolCapCredits: null }), null);
+  it("gives the whole pool to players, and only dust is skipped", () => {
+    assert.equal(REWARDS.roundSplit.treasuryPct, 0);
+    const pool = credits(REWARDS.roundPoolFloorCredits);
+    const payouts = computeRoundPayouts(baseInput({ pool }));
+    assert.ok(payouts.pitches.length > 0 && payouts.pitches.every((p) => p.amount > 0n), "small rewards are paid, not skipped");
   });
 });
 

@@ -63,9 +63,16 @@ export default async function RecapPage({ params }: Props) {
           <StatTile
             label="Round pool"
             value={r.poolCredits === null ? <NotAvailable reason={NA_REASONS.capNotSet} /> : formatCompact(r.poolCredits)}
-            hint="$CREDIT, displayed, not paid"
+            hint="$CREDIT, paid by the team after the round"
           />
         </div>
+        {r.funding && (
+          <p className="mx-auto mt-4 max-w-lg text-sm text-fern">
+            {r.funding.allocatedCredits > 0
+              ? `Awarded: ${formatCompact(r.funding.allocatedCredits)} $CREDIT, ${formatCompact(r.funding.fromTreasuryCredits)} from the treasury and ${formatCompact(r.funding.fromDevCredits)} added by the dev. Frozen when the round ended.`
+              : "Nothing was awarded this round (too few voters or no pitch with votes): the treasury keeps its share for the next round."}
+          </p>
+        )}
         {r.top && r.top.length > 1 && (
           <ol className="mx-auto mt-8 max-w-md space-y-2 text-left">
             {r.top.map((x, i) => (

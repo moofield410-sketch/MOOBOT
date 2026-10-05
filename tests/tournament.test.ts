@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
-import { AUTH, CHAIN, FULL_UNLOCK_AFTER_H, TOURNAMENT, VOTING } from "@/config";
+import { AUTH, CHAIN, FULL_UNLOCK_AFTER_H, REWARDS, TOURNAMENT, VOTING } from "@/config";
 import { kvCas, kvClearMemory } from "@/lib/kv";
 import { buildTimeline } from "@/lib/schedule";
 import type { OrbioAgent } from "@/lib/sources/orbio-api";
@@ -10,6 +10,7 @@ import { pastRoundOf, rankBoard } from "@/lib/tournament/results";
 import { applyHide, applyScore, applyVote, checkDemoUrl, textProblem, TournamentError } from "@/lib/tournament/rules";
 import {
   castVote,
+  currentPool,
   hidePitch,
   ledger,
   pastRounds,
@@ -602,5 +603,79 @@ describe("Audit fixes (5 Oct 2026)", () => {
     fc.setHead(UNLOCK + 72 * 3_600_000);
     const broken: SnapshotChain = { ...fc.chain, transferSum: async (_t, _o, dir) => (dir === "in" ? 5n * E18 : 0n) };
     await assert.rejects(balanceAtSnapshot(broken, ORBIO, "0x2222222222222222222222222222222222222222" as Address, 2_000_000n), /negative/);
+  });
+});
+
+describe("Paid rounds: frozen results, 60% pool and the dev's floor", () => {
+  const C = (n: number) => BigInt(n) * 1_000_000n;
+
+  async function playRound(s: ReturnType<typeof setup>) {
+    const at = s.deps.now();
+    const p = await submitPitch(s.deps, ...(await signed(s.fighter, "pitch", pitchFields("101"), { at })));
+    // Five voters (the minimum) back the pitch; voter 5 holds too little to vote.
+    for (const v of s.voters.slice(0, 5)) await castVote(s.deps, ...(await signed(v, "vote", { Pitch: p.id }, { at })));
+    return p;
+  }
+
+  it("freezes a finished round once: pool, funding and shares never change after", async () => {
+    const s = setup();
+    let gross = C(100);
+    const deps = { ...s.deps, grossTreasury: async () => gross };
+    await playRound({ ...s, deps });
+    s.setNow(UNLOCK + ROUND_MS + 60_000);
+
+    const first = await pastRounds(deps);
+    const f = first.finals[0]!;
+    assert.equal(f.shareAtoms, C(60).toString(), "60% of the treasury");
+    assert.equal(f.devTopUpAtoms, C(40).toString(), "the dev tops up to the floor");
+    assert.equal(f.poolAtoms, C(REWARDS.roundPoolFloorCredits).toString());
+    // Only the pitches and voters buckets are used (no Master took part): the treasury pays first.
+    assert.ok(BigInt(f.allocatedAtoms) > 0n && BigInt(f.allocatedAtoms) <= BigInt(f.poolAtoms));
+    assert.equal(BigInt(f.fromTreasuryAtoms) + BigInt(f.fromDevAtoms), BigInt(f.allocatedAtoms));
+    assert.ok(BigInt(f.fromTreasuryAtoms) <= BigInt(f.shareAtoms));
+    const fighterBefore = await ledger(lc(s.fighter), deps);
+
+    // The treasury grows and a new Master appears: the frozen round doesn't move.
+    gross = C(10_000);
+    s.masters.push(master("901", lc(s.voters[0])));
+    const again = await pastRounds(deps);
+    assert.deepEqual(again.finals[0], f);
+    assert.deepEqual(await ledger(lc(s.fighter), deps), fighterBefore);
+  });
+
+  it("starts each round from what earlier rounds left in the treasury", async () => {
+    const s = setup();
+    const deps = { ...s.deps, grossTreasury: async () => C(1_000) };
+    await playRound({ ...s, deps });
+    s.setNow(UNLOCK + ROUND_MS + 60_000);
+    const { finals, paidFromTreasury } = await pastRounds(deps);
+    const paid = BigInt(finals[0]!.fromTreasuryAtoms);
+    assert.equal(paidFromTreasury, paid);
+    const now = await currentPool(deps);
+    assert.equal(now!.treasury, C(1_000) - paid, "the next round's treasury is what's left");
+    assert.equal(now!.share, (now!.treasury * 60n) / 100n);
+  });
+
+  it("awards nothing and costs the dev nothing with too few voters", async () => {
+    const s = setup();
+    const deps = { ...s.deps, grossTreasury: async () => C(50) };
+    const at = s.deps.now();
+    const p = await submitPitch(deps, ...(await signed(s.fighter, "pitch", pitchFields("101"), { at })));
+    await castVote(deps, ...(await signed(s.voters[0], "vote", { Pitch: p.id }, { at })));
+    s.setNow(UNLOCK + ROUND_MS + 60_000);
+    const f = (await pastRounds(deps)).finals[0]!;
+    assert.equal(f.allocatedAtoms, "0");
+    assert.equal(f.fromDevAtoms, "0");
+    assert.equal(f.fromTreasuryAtoms, "0");
+  });
+
+  it("waits to freeze while the treasury can't be read", async () => {
+    const s = setup();
+    const deps = { ...s.deps, grossTreasury: async () => null };
+    await playRound({ ...s, deps });
+    s.setNow(UNLOCK + ROUND_MS + 60_000);
+    const v = await pastRounds(deps);
+    assert.equal(v.finals[0], null);
+    assert.equal(v.past[0].poolCredits, null);
   });
 });

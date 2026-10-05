@@ -34,7 +34,7 @@ In the $CREDIT token of Orbio ([@orbiodotso](https://x.com/orbiodotso)), from th
 
 ## Are rewards guaranteed?
 
-No. Rewards are displayed, not paid, and legal review comes before any real payout. Nothing on this site is financial advice.
+Each round that's scored (at least {{MIN_VOTERS}} voters) has a pool of at least {{POOL_FLOOR}}: the dev tops up the treasury's share when it's smaller. The team pays the winners after each round, by hand; the site itself never sends anything. Nothing on this site is financial advice, and taking part is never an investment.
 
 ## Does tapping MooBot do anything?
 

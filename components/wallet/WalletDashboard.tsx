@@ -214,7 +214,7 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
                 <li key={`${e.round}-${e.role}-${i}`} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
                   <div>
                     <p className="text-soil">{e.label}</p>
-                    <p className="text-xs text-soil/60">Round {e.round} · displayed, not paid</p>
+                    <p className="text-xs text-soil/60">Round {e.round} · paid by the team after the round</p>
                   </div>
                   <span className="font-mono font-semibold tabular-nums text-soil">
                     {e.amountAtoms === null ? <NotAvailable reason={NA_REASONS.capNotSet} /> : `${formatCredits(e.amountAtoms)} $CREDIT`}
@@ -224,7 +224,7 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
             </ul>
           ) : (
             <EmptyState title="No rewards yet" plain>
-              <p>Rewards from pitches, votes and Masters&apos; shares appear here once a round you took part in ends. Displayed, not paid.</p>
+              <p>Rewards from pitches, votes and Masters&apos; shares appear here once a round you took part in ends, from its frozen result. The team pays them to this wallet after the round.</p>
             </EmptyState>
           )}
         </LockGate>

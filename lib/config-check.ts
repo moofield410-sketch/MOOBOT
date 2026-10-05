@@ -17,7 +17,7 @@ type RewardsConfig = {
   agentOpsPct: number;
   treasuryPct: number;
   roundPoolPctOfTreasury: number;
-  roundPoolCapCredits: number | null;
+  roundPoolFloorCredits: number;
   roundSplit: Record<string, number>;
   pitchPlaces: readonly number[];
   voterShareCapPct: number;
@@ -35,7 +35,7 @@ export function rewardsErrors(r: RewardsConfig = REWARDS): string[] {
   if (sum(r.pitchPlaces) !== 100) errors.push(`REWARDS.pitchPlaces sums to ${sum(r.pitchPlaces)}, expected 100`);
   const pcts = [r.agentOpsPct, r.treasuryPct, r.roundPoolPctOfTreasury, r.voterShareCapPct, ...Object.values(r.roundSplit), ...r.pitchPlaces];
   if (!pcts.every(pctOk)) errors.push("Every REWARDS percentage must be between 0 and 100");
-  if (r.roundPoolCapCredits !== null && !(r.roundPoolCapCredits > 0)) errors.push("REWARDS.roundPoolCapCredits must be positive or null");
+  if (!(r.roundPoolFloorCredits >= 0)) errors.push("REWARDS.roundPoolFloorCredits must be zero or more");
   if (!(r.minVoters >= 1 && r.minPayoutCredits >= 0)) errors.push("REWARDS guards must be non-negative (minVoters >= 1)");
   if (!(r.repeatWinner.rounds >= 0 && r.repeatWinner.factor >= 0 && r.repeatWinner.factor <= 1)) {
     errors.push("REWARDS.repeatWinner.factor must be between 0 and 1");
@@ -68,7 +68,6 @@ export function missingConfirmItems(): string[] {
   if ((process.env.SESSION_SECRET?.trim().length ?? 0) < 32) missing.push("SESSION_SECRET (env, at least 32 characters)");
   if (CONTRACTS.launchpad.length === 0) missing.push("CONTRACTS.launchpad (not published by Orbio)");
   if (!process.env[MOOBOT_TOKEN.env]?.trim()) missing.push(`${MOOBOT_TOKEN.env} (env, set on launch day)`);
-  if (REWARDS.roundPoolCapCredits === null) missing.push("REWARDS.roundPoolCapCredits");
   if (!SOCIAL.x) missing.push("SOCIAL.x (the official X account, for the footer and the From X section)");
   return missing;
 }

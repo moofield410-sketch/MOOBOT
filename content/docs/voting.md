@@ -49,4 +49,4 @@ Voting power grows with your balance, but slowly, so that a few very large walle
 
 ## Voters share a reward bucket
 
-Everyone who votes would share the voters bucket of the round pool, whichever pitch they backed, weighted by voting power with a per-wallet cap. Rewards are displayed, not paid. See [Rewards](/docs/rewards).
+Everyone who votes shares the voters bucket of the round pool, whichever pitch they backed, weighted by voting power with a per-wallet cap. The team pays it after the round. See [Rewards](/docs/rewards).

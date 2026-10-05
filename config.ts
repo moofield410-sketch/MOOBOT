@@ -349,20 +349,24 @@ export const REWARDS = {
   /** Of the Orbio $CREDIT the MooBot agent receives: 20% runs the agent (taken first), 80% to the treasury. */
   agentOpsPct: 20,
   treasuryPct: 80,
-  /** Round pool = min(roundPoolPctOfTreasury% of the treasury balance, roundPoolCapCredits). */
-  roundPoolPctOfTreasury: 25,
-  /** CONFIRM: hard cap per round, in whole $CREDIT. While null, the round pool shows "n/a". */
-  roundPoolCapCredits: null as number | null,
-  /** Split of each round pool. Must sum to 100. */
-  roundSplit: { pitchesPct: 35, votersPct: 10, mastersPct: 10, treasuryPct: 45 },
+  /**
+   * Round pool = max(roundPoolPctOfTreasury% of the treasury, roundPoolFloorCredits). The owner's
+   * rules (2026-10-05): 60% of the treasury goes to each round and the rest rolls over to the
+   * next; when that is under the floor, the dev adds the difference, so every round that is scored
+   * pays at least the floor. Winners are paid by the dev by hand after each round.
+   */
+  roundPoolPctOfTreasury: 60,
+  roundPoolFloorCredits: 100,
+  /** Split of each round pool. Must sum to 100. The whole pool goes to players (the 40% rollover is the treasury's part). */
+  roundSplit: { pitchesPct: 64, votersPct: 18, mastersPct: 18, treasuryPct: 0 },
   /** Top-3 pitches share the pitches bucket. Must sum to 100. */
   pitchPlaces: [50, 30, 20],
   /** CONFIRM: no wallet gets more than this % of the voters' bucket. */
   voterShareCapPct: 10,
-  /** No payouts unless at least this many wallets voted. */
+  /** No payouts unless at least this many wallets voted (then the round's pool rolls over, and the dev adds nothing). */
   minVoters: 5,
-  /** Payouts under this many whole $CREDIT are skipped (they stay in the treasury). */
-  minPayoutCredits: 100,
+  /** Only dust is skipped: amounts under this many $CREDIT (it may be a fraction). */
+  minPayoutCredits: 0.01,
   /** An agent that placed in the top 3 gets `factor` of its share if it places again within `rounds` rounds. */
   repeatWinner: { rounds: 5, factor: 0.5 },
   /** A Master takes part by scoring at least this many pitches (or all, if fewer), or a tender that got a pitch. */

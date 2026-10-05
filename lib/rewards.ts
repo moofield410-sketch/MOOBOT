@@ -22,11 +22,33 @@ export function splitReceived(received: bigint, r: RewardsConfig = REWARDS): { a
 }
 
 /** Round pool = min(25% of the treasury, cap). Null while the cap is not set (shown as "n/a"). */
-export function roundPool(treasury: bigint, r: { roundPoolPctOfTreasury: number; roundPoolCapCredits: number | null } = REWARDS): bigint | null {
-  if (r.roundPoolCapCredits === null) return null;
+/** A round's pool and who funds it. */
+export interface PoolPlan {
+  /** The treasury the round starts from (after every earlier round's payouts). */
+  treasury: bigint;
+  /** roundPoolPctOfTreasury% of it; the rest rolls over to the next round. */
+  share: bigint;
+  /** What the dev adds so the pool reaches the floor (0 once the share is bigger). */
+  devTopUp: bigint;
+  pool: bigint;
+}
+
+/** Round pool = max(share of the treasury, floor): the dev tops up whatever the treasury's share is short of the floor. */
+export function roundPool(treasury: bigint, r: { roundPoolPctOfTreasury: number; roundPoolFloorCredits: number } = REWARDS): PoolPlan {
   const share = pctOf(treasury, r.roundPoolPctOfTreasury);
-  const cap = credits(r.roundPoolCapCredits);
-  return share < cap ? share : cap;
+  const floor = credits(r.roundPoolFloorCredits);
+  const pool = share > floor ? share : floor;
+  return { treasury, share, devTopUp: pool - share, pool };
+}
+
+/**
+ * Who pays what a round actually allocated: the treasury's share first, the dev the rest. What
+ * isn't allocated (too few voters, an empty place) is never taken: the treasury keeps it for the
+ * next round, and the dev adds nothing for it.
+ */
+export function fundingOf(plan: Pick<PoolPlan, "share">, allocated: bigint): { fromTreasury: bigint; fromDev: bigint } {
+  const fromTreasury = allocated < plan.share ? allocated : plan.share;
+  return { fromTreasury, fromDev: allocated - fromTreasury };
 }
 
 export interface RoundPitch {
@@ -159,7 +181,8 @@ export function mastersTakingPart(input: RoundInput, r: RewardsConfig = REWARDS)
 
 export function computeRoundPayouts(input: RoundInput, r: RewardsConfig = REWARDS): RoundPayouts {
   const skipped: Skipped[] = [];
-  const minPayout = credits(r.minPayoutCredits);
+  // A fraction of a $CREDIT is allowed: only dust is skipped.
+  const minPayout = BigInt(Math.round(r.minPayoutCredits * Number(CREDIT)));
   let toTreasury = 0n;
 
   const { kept: votes, ignored } = dedupeVotes(input.votes);

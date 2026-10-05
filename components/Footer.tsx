@@ -88,7 +88,7 @@ export function Footer() {
         <div className="safe-x mx-auto flex max-w-7xl flex-col gap-2 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-xs sm:[--safe-pad:1.5rem] leading-relaxed text-fern sm:px-6 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl space-y-1">
             <p className="font-semibold text-soil/85">{DISCLAIMER}</p>
-            <p>Nothing here is an offer or a promise of returns. Rewards are not guaranteed and are displayed, not paid. MooBot is an original character.</p>
+            <p>Nothing here is an offer or a promise of returns. Tournament rewards are paid in $CREDIT by the team after each round; the site itself never sends anything. MooBot is an original character.</p>
           </div>
           <p className="flex shrink-0 items-end gap-2">
             {/* A small sleeping MooBot in the corner. */}

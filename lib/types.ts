@@ -103,8 +103,10 @@ export interface PastRound {
   winnerPitchId: string | null;
   winnerTitle: string | null;
   winnerFighter: string | null;
-  /** The round pool in whole $CREDIT, or null while the per-round cap isn't set. */
+  /** The round pool in $CREDIT, or null while the round can't be worked out yet (credits unreadable). */
   poolCredits: number | null;
+  /** Who funds what the round awards (frozen with the round): the treasury's share first, then the dev. */
+  funding?: { allocatedCredits: number; fromTreasuryCredits: number; fromDevCredits: number };
   pitchCount?: number;
   /** The top places, best first. */
   top?: { id: string; title: string; fighter: string; ticker?: string; logoUrl?: string | null; votes: number; votingPower: number }[];
@@ -183,10 +185,13 @@ export interface CreditStats {
 
 /** Treasury and this round's pool. Atom strings; poolAtoms is null while the cap is not set. */
 export interface TreasuryState {
+  /** What the treasury holds now: 80% of everything received, less what earlier rounds paid. */
   treasuryAtoms: string;
+  /** The running round's share of it (REWARDS.roundPoolPctOfTreasury%). */
   poolShareAtoms: string;
-  capAtoms: string | null;
-  poolAtoms: string | null;
+  /** What the dev adds so the pool reaches the floor. */
+  devTopUpAtoms: string;
+  poolAtoms: string;
 }
 
 export interface OwnedAgent {

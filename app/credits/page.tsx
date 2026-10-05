@@ -13,7 +13,7 @@ import { CHAIN, CONTRACTS, FULL_UNLOCK_AFTER_H, REWARDS, TOURNAMENT } from "@/co
 import { averagePerDay, getCreditMarket } from "@/lib/credit-market";
 import { getCredits, getTreasury } from "@/lib/credits";
 import { formatCompact, formatInt, formatUtcDateTime } from "@/lib/format";
-import { credits as creditAtoms, formatCredits } from "@/lib/rewards";
+import { formatCredits } from "@/lib/rewards";
 import { splitByPercent } from "@/lib/splits";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +28,8 @@ export default async function CreditsPage() {
   const pool = t?.poolAtoms ? BigInt(t.poolAtoms) : null;
   const buckets = pool !== null ? splitByPercent(pool, S, "treasuryPct") : null;
   const creditUrl = CHAIN.explorerUrl ? `${CHAIN.explorerUrl}/token/${CONTRACTS.creditToken}` : null;
-  // Why the pool is n/a: no treasury yet (no MooBot agent on Orbio), or the per-round cap isn't set.
-  const poolNa = <NotAvailable reason={t ? NA_REASONS.capNotSet : NA_REASONS.moobotAgent} />;
+  // Why the pool is n/a: no treasury figure yet (the MooBot agent's credits can't be read).
+  const poolNa = <NotAvailable reason={NA_REASONS.moobotAgent} />;
   const treasuryNa = <NotAvailable reason={NA_REASONS.moobotAgent} />;
   const v = (atoms: bigint | undefined) => (atoms === undefined ? poolNa : formatCredits(atoms));
 
@@ -50,7 +50,9 @@ export default async function CreditsPage() {
             )}{" "}
             (Orbio describes one $CREDIT as one dollar of AI usage balance). Moofield&apos;s policy, not an on-chain rule: of the
             $CREDIT the MooBot agent receives, {REWARDS.agentOpsPct}% runs the agent first and {REWARDS.treasuryPct}% goes to the
-            treasury, an accounting figure shown here. Nothing is paid out.{" "}
+            treasury, an accounting figure shown here. Each round, {REWARDS.roundPoolPctOfTreasury}% of the treasury becomes the pool (the
+            rest rolls over), the dev tops it up to at least {formatInt(REWARDS.roundPoolFloorCredits)} $CREDIT, and the team pays the
+            winners after the round.{" "}
             <Link href="/docs/rewards" className="link">
               How rewards work
             </Link>
@@ -67,17 +69,17 @@ export default async function CreditsPage() {
           <dl>
             <StatRow label="Treasury balance" value={t ? formatCredits(t.treasuryAtoms) : treasuryNa} />
             <StatRow label={`${REWARDS.roundPoolPctOfTreasury}% of the treasury`} value={t ? formatCredits(t.poolShareAtoms) : treasuryNa} />
-            <StatRow
-              label="Cap per round"
-              value={REWARDS.roundPoolCapCredits !== null ? formatCredits(creditAtoms(REWARDS.roundPoolCapCredits)) : "Not set yet"}
-            />
+            <StatRow label="Added by the dev" value={t ? formatCredits(t.devTopUpAtoms) : treasuryNa} />
             <StatRow label="This round's pool" value={pool !== null ? formatCredits(pool) : poolNa} />
           </dl>
           <p className="rounded-xl mt-5 border border-line bg-hay px-4 py-3 font-mono text-sm text-soil">
-            Round pool = min({REWARDS.roundPoolPctOfTreasury}% × treasury, cap)
+            Round pool = max({REWARDS.roundPoolPctOfTreasury}% × treasury, {formatInt(REWARDS.roundPoolFloorCredits)})
+          </p>
+          <p className="mt-3 text-sm text-soil/75">
+            The other {100 - REWARDS.roundPoolPctOfTreasury}% of the treasury rolls over to the next round. When {REWARDS.roundPoolPctOfTreasury}% is
+            under {formatInt(REWARDS.roundPoolFloorCredits)} $CREDIT, the dev adds the difference. The pool is fixed when the round ends.
           </p>
           {!t && <p className="mt-3 text-sm text-soil/75">The treasury appears once the official $MOOBOT contract is confirmed on Orbio.</p>}
-          {t && pool === null && <p className="mt-3 text-sm text-soil/75">The per-round cap hasn&apos;t been set yet, so the pool is shown as n/a.</p>}
         </Card>
       </div>
 
@@ -88,7 +90,7 @@ export default async function CreditsPage() {
               label="Pitches"
               pct={S.pitchesPct}
               value={v(buckets?.pitchesPct)}
-              note={`The top ${REWARDS.pitchPlaces.length} pitches would share it ${REWARDS.pitchPlaces.join("/")}.`}
+              note={`The top ${REWARDS.pitchPlaces.length} pitches share it ${REWARDS.pitchPlaces.join("/")}.`}
             />
             <MeterRow
               label="Voters"
@@ -97,28 +99,28 @@ export default async function CreditsPage() {
               note={`Everyone who voted, whichever pitch they backed, by voting power. Max ${REWARDS.voterShareCapPct}% per wallet.`}
             />
             <MeterRow label="Masters" pct={S.mastersPct} value={v(buckets?.mastersPct)} note="Shared equally by Masters who took part in the round." />
-            <MeterRow label="Stays in the treasury" pct={S.treasuryPct} value={v(buckets?.treasuryPct)} note="Carried into the next round." />
+            {S.treasuryPct > 0 && <MeterRow label="Stays in the treasury" pct={S.treasuryPct} value={v(buckets?.treasuryPct)} note="Carried into the next round." />}
           </div>
         </Card>
 
         <Card eyebrow="Fair-play guards" title="When rewards are held back">
-          <p className="mb-3 text-sm text-soil/75">These rules are fixed in the rewards calculator. No round has been scored yet.</p>
+          <p className="mb-3 text-sm text-soil/75">These rules are fixed in the rewards calculator.</p>
           <ul className="list-disc space-y-2.5 pl-5 text-sm text-soil/85 marker:text-wheat">
-            <li>No rewards for a round unless at least {REWARDS.minVoters} wallets voted. The pool stays in the treasury.</li>
-            <li>Any single reward under {REWARDS.minPayoutCredits} $CREDIT is skipped and stays in the treasury.</li>
+            <li>No rewards for a round unless at least {REWARDS.minVoters} wallets voted. Then the treasury keeps its share for the next round, and the dev adds nothing.</li>
+            <li>A place or bucket nobody qualifies for (no third pitch with votes, no Master taking part) isn&apos;t paid; the treasury keeps it.</li>
             <li>
               An agent that placed in the top {REWARDS.pitchPlaces.length} gets{" "}
               {REWARDS.repeatWinner.factor === 0.5 ? "half" : `${Math.round(REWARDS.repeatWinner.factor * 100)}% of`} its share if it places
               again within the next {REWARDS.repeatWinner.rounds} rounds.
             </li>
-            <li>A Master gets no Masters share in a round where it is the Fighter behind a top-{REWARDS.pitchPlaces.length} pitch.</li>
+            <li>A Master gets no Masters share in a round where it, or another agent of its owner, is behind a top-{REWARDS.pitchPlaces.length} pitch.</li>
             <li>
               Round 1 starts {FULL_UNLOCK_AFTER_H} hours after go-live. Rounds last {TOURNAMENT.roundLengthH} hours.
             </li>
           </ul>
           <p className="rounded-xl mt-5 border border-line-strong bg-oat px-4 py-3 text-sm text-soil">
-            <span className="font-semibold text-grass">Displayed, not paid.</span> Legal review comes before any real payout. Rewards are
-            not guaranteed.
+            <span className="font-semibold text-grass">Paid by the team after each round.</span> When a round ends its result and every
+            share are frozen and shown here and in each wallet; the dev then sends the $CREDIT by hand. The site itself never sends anything.
           </p>
         </Card>
       </div>

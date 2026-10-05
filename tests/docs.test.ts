@@ -61,8 +61,9 @@ describe("docs", () => {
   it("the Rewards worked example matches the real rewards code", () => {
     const md = rendered("rewards");
     const received = splitReceived(credits(10_000));
-    const r = { ...REWARDS, roundPoolCapCredits: 40_000 };
-    const pool = roundPool(credits(200_000), r)!;
+    const plan = roundPool(credits(2_000));
+    const small = roundPool(credits(100));
+    const pool = plan.pool;
 
     const pitch = (id: string, fighter: string, minute: number): RoundPitch => ({
       id,
@@ -76,34 +77,18 @@ describe("docs", () => {
       ...Array.from({ length: 9 }, (_, i) => ({ wallet: wallet(i + 1), pitchId: i < 5 ? "p2" : "p3", power: 100 })),
     ];
     const masters = Array.from({ length: 5 }, (_, i) => ({ id: `m${i}`, agentId: i === 0 ? "A" : `master-${i}`, ownerWallet: wallet(50 + i) }));
-    const payouts = computeRoundPayouts(
-      { pool, pitches: [pitch("p1", "A", 1), pitch("p2", "B", 2), pitch("p3", "C", 3)], votes, masters, scores: [], tenders: masters.map((m) => ({ masterId: m.id, pitchCount: 1 })), recentTop3: [] },
-      r,
-    );
-    const repeat = computeRoundPayouts({ pool, pitches: [pitch("p1", "A", 1), pitch("p2", "B", 2), pitch("p3", "C", 3)], votes, masters, scores: [], tenders: [], recentTop3: ["B"] }, r);
+    const pitches = [pitch("p1", "A", 1), pitch("p2", "B", 2), pitch("p3", "C", 3)];
+    const payouts = computeRoundPayouts({ pool, pitches, votes, masters, scores: [], tenders: masters.map((m) => ({ masterId: m.id, pitchCount: 1 })), recentTop3: [] });
 
-    const expected = [
-      received.agentOps,
-      received.treasury,
-      credits(50_000),
-      pool,
-      credits(14_000),
-      credits(4_000),
-      credits(18_000),
-      ...payouts.pitches.map((p) => p.amount),
-      payouts.voters[0].amount,
-      payouts.masters[0].amount,
-      repeat.pitches.find((p) => p.pitchId === "p2")!.amount,
-    ];
+    const expected = [received.agentOps, received.treasury, plan.share, pool, small.share, small.devTopUp, small.pool, ...payouts.pitches.map((p) => p.amount), payouts.voters[0].amount, payouts.masters[0].amount];
     for (const v of expected) assert.ok(md.includes(n(v)), `rewards.md should mention ${n(v)}`);
 
-    assert.equal(received.agentOps, credits(2_000));
-    assert.equal(pool, credits(40_000));
-    assert.deepEqual(payouts.pitches.map((p) => n(p.amount)), ["7,000", "4,200", "2,800"]);
-    assert.ok(payouts.voters.length === 10 && payouts.voters.every((v) => v.amount === credits(400)));
-    assert.ok(payouts.masters.length === 4 && payouts.masters.every((m) => m.amount === credits(1_000)));
-    assert.equal(payouts.toTreasury, credits(18_000));
+    assert.equal(plan.share, credits(1_200), "60% of the treasury");
+    assert.equal(plan.devTopUp, 0n);
+    assert.equal(small.pool, credits(REWARDS.roundPoolFloorCredits), "the dev tops a small treasury up to the floor");
+    assert.equal(small.share + small.devTopUp, small.pool);
   });
+
 
   it("the voting power table matches the voting code", () => {
     const md = rendered("voting");
@@ -169,7 +154,8 @@ describe("docs numbers come from config.ts", () => {
       `${FULL_UNLOCK_AFTER_H} hours after go-live`,
       `${REWARDS.agentOpsPct}% runs the agent first`,
       `| ${REWARDS.roundSplit.pitchesPct}% | Pitches`,
-      `| ${REWARDS.roundSplit.treasuryPct}% | Stays in the treasury`,
+      `round pool = max(${REWARDS.roundPoolPctOfTreasury}% × treasury, ${REWARDS.roundPoolFloorCredits.toLocaleString("en-US")} $CREDIT)`,
+      `the other ${100 - REWARDS.roundPoolPctOfTreasury}% rolls over`,
       `${REWARDS.roundPoolPctOfTreasury}% of the treasury balance`,
       REWARDS.pitchPlaces.join(" / "),
       `at most every ${Math.round(CACHE.mastersTtlMs / 60_000)} minutes`,
@@ -188,7 +174,9 @@ describe("docs numbers come from config.ts", () => {
     // A different round split changes the worked example, computed by the real rewards code.
     const otherSplit = { ...REWARDS, roundSplit: { pitchesPct: 40, votersPct: 10, mastersPct: 10, treasuryPct: 40 } } as unknown as typeof REWARDS;
     const other = rewardsWorkedExample(otherSplit);
-    assert.ok(other.includes("| Pitches | 40% | 16,000 |"), other);
+    // 60% of the example's 2,000 $CREDIT treasury is a 1,200 pool; 40% of it is 480.
+    assert.ok(other.includes("| Pitches | 40% | 480 |"), other);
+    assert.ok(other.includes("| Stays in the treasury | 40% | 480 |"), other);
     assert.notEqual(other, rewardsWorkedExample());
   });
 
@@ -219,9 +207,11 @@ describe("docs wording", () => {
     for (const { slug, md } of all()) assert.ok(!/agent goes live|agent is live|I go live/i.test(md), `${slug} says the agent goes live`);
   });
 
-  it("states that rewards are displayed, not paid, and the split is a policy", () => {
+  it("states how winners are paid (by the team, by hand, after each round), and that the split is a policy", () => {
     const md = rendered("rewards");
-    assert.match(md, /displayed, not paid/);
+    assert.match(md, /paid by the team after each round/);
+    assert.match(md, /never sends anything/);
+    assert.match(md, /at least/);
     assert.match(md, /policy/);
     assert.match(md, /not enforced on-chain/);
     assert.ok(md.includes(ORBIO_LINKS.liveTerms), "links Orbio's live terms instead of restating its fee split");

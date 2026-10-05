@@ -23,7 +23,7 @@ import { NotAvailable } from "@/components/ui/NotAvailable";
 import { NA_REASONS } from "@/lib/na-reasons";
 import { StatTile } from "@/components/ui/Stats";
 import { SprigDivider } from "@/components/ui/Nature";
-import { AGENT_LIVE_AT, FULL_UNLOCK_AFTER_H, SITE, TOURNAMENT, VOTING } from "@/config";
+import { AGENT_LIVE_AT, FULL_UNLOCK_AFTER_H, REWARDS, SITE, TOURNAMENT, VOTING } from "@/config";
 import { MISSES_PER_ROW, SEEDS } from "@/lib/bloom-pop";
 import { PETALS } from "@/lib/pollen-path";
 import { buildTimeline } from "@/lib/schedule";
@@ -59,7 +59,7 @@ const STEPS = [
     n: "3",
     stage: "Bloom",
     title: "Win",
-    body: `Each ${TOURNAMENT.roundLengthH}-hour round crowns one champion. Rewards in Orbio $CREDIT are displayed, not paid.`,
+    body: `Each ${TOURNAMENT.roundLengthH}-hour round crowns one champion. The pool, in Orbio $CREDIT, is at least ${REWARDS.roundPoolFloorCredits.toLocaleString("en-US")} a round, paid by the team after it ends.`,
   },
 ];
 

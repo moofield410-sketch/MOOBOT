@@ -115,3 +115,27 @@ export interface PowerRecord {
 }
 
 export const emptyRound = (round: number): RoundDoc => ({ round, snapshot: null, pitches: [], votes: [], scores: [], hidden: [] });
+
+/**
+ * A finished round, frozen the first time it is read after it ends (lib/tournament/service.ts
+ * pastRounds). $CREDIT amounts are atoms (6 decimals) as strings. The dev pays `allocatedAtoms`
+ * to the winners by hand: `fromTreasuryAtoms` out of the treasury's share, `fromDevAtoms` added.
+ */
+export interface FinalRound {
+  round: number;
+  frozenAt: string;
+  /** The treasury this round started from (after every earlier round's payouts). */
+  treasuryAtoms: string;
+  /** REWARDS.roundPoolPctOfTreasury% of it. */
+  shareAtoms: string;
+  /** What the dev adds so the pool reaches the floor. */
+  devTopUpAtoms: string;
+  poolAtoms: string;
+  /** What the round actually awards (less than the pool when a place or bucket is empty). */
+  allocatedAtoms: string;
+  fromTreasuryAtoms: string;
+  fromDevAtoms: string;
+  /** Everything the rewards calculator used, so every wallet's share can be recomputed exactly. */
+  input: Omit<import("@/lib/rewards").RoundInput, "pool"> & { pool: string };
+  result: import("@/lib/types").PastRound;
+}

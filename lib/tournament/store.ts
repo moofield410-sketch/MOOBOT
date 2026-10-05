@@ -1,5 +1,5 @@
-import { kvCas, kvGet, kvSet } from "@/lib/kv";
-import { emptyRound, type PowerRecord, type RoundDoc, type TendersDoc } from "@/lib/tournament/types";
+import { kvCas, kvGet, kvSet, kvSetIf } from "@/lib/kv";
+import { emptyRound, type FinalRound, type PowerRecord, type RoundDoc, type TendersDoc } from "@/lib/tournament/types";
 import type { Address } from "@/lib/types";
 
 /**
@@ -48,3 +48,13 @@ export function updateTenders<R>(change: (doc: TendersDoc) => { doc: TendersDoc;
 
 export const readPower = (n: number, wallet: Address) => kvGet<PowerRecord>(powerKey(n, wallet));
 export const writePower = (p: PowerRecord) => kvSet(powerKey(p.round, p.wallet), p);
+
+/** A finished round's frozen result (written once, never changed). */
+export const finalKey = (n: number) => `t:final:${n}`;
+export const readFinal = (n: number) => kvGet<FinalRound>(finalKey(n));
+
+/** Stores a round's frozen result if none exists yet; returns whichever is stored (the first writer wins). */
+export async function freezeFinal(f: FinalRound): Promise<FinalRound> {
+  if (await kvSetIf(finalKey(f.round), f, null)) return f;
+  return (await readFinal(f.round)) ?? f;
+}

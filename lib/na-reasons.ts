@@ -8,7 +8,7 @@ export const NA_REASONS = {
   /** Orbio returned null for this field ("null means unavailable, never zero"). */
   orbioNull: "Orbio has no value for this yet.",
   moobotAgent: "Appears once the official $MOOBOT contract is confirmed on Orbio.",
-  capNotSet: "The per-round cap isn't set yet.",
+  capNotSet: "This round's result is still being worked out: the treasury couldn't be read. Please check back soon.",
   moobotUnverified: "The $MOOBOT contract couldn't be confirmed on Orbio yet.",
   rpcMissing: "Balance source not connected yet.",
 } as const;

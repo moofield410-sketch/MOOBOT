@@ -5,7 +5,7 @@ import { getCredits } from "@/lib/credits";
 import { kvMode } from "@/lib/kv";
 import { reportError } from "@/lib/monitoring";
 import { getMasters } from "@/lib/registry";
-import { roundPool, type RoundMaster } from "@/lib/rewards";
+import { computeRoundPayouts, fundingOf, roundPool, totalAllocated, type PoolPlan, type RoundMaster } from "@/lib/rewards";
 import { currentRound, type RoundState } from "@/lib/rounds";
 import type { Timeline } from "@/lib/schedule";
 import { logoPath } from "@/lib/safe-url";
@@ -29,8 +29,8 @@ import {
   TournamentError,
 } from "@/lib/tournament/rules";
 import { balanceAtSnapshot, findSnapshotBlock, powerOf, viemSnapshotChain, type SnapshotChain } from "@/lib/tournament/snapshot";
-import { readPower, readRound, readTenders, updateRound, updateTenders, writePower } from "@/lib/tournament/store";
-import type { PowerRecord, RoundDoc, StoredPitch, StoredScore, StoredTender, StoredVote } from "@/lib/tournament/types";
+import { freezeFinal, readFinal, readPower, readRound, readTenders, updateRound, updateTenders, writePower } from "@/lib/tournament/store";
+import type { FinalRound, PowerRecord, RoundDoc, StoredPitch, StoredScore, StoredTender, StoredVote } from "@/lib/tournament/types";
 import type { Address, Master, PastRound } from "@/lib/types";
 
 /**
@@ -49,6 +49,8 @@ export interface TournamentDeps {
   masters(): Promise<Master[]>;
   verify(address: Address, message: string, signature: Hex): Promise<boolean>;
   moderators(): Address[];
+  /** 80% of all $CREDIT received, before payouts (tests give a fixed one). Default: from Orbio. */
+  grossTreasury?: () => Promise<bigint | null>;
 }
 
 /** Checks a signature offline first (normal wallets); smart-contract wallets are checked on chain. */
@@ -366,36 +368,110 @@ export async function startedRounds(deps: TournamentDeps = defaultDeps): Promise
   };
 }
 
-/** The round pool in $CREDIT atoms: min(share of the treasury, cap). null while the cap isn't set or credits are unknown. */
-async function poolAtoms(): Promise<bigint | null> {
-  if (REWARDS.roundPoolCapCredits === null) return null;
+/** 80% of everything the MooBot agent has received (before any round's payouts), or null if unknown. */
+async function grossTreasury(): Promise<bigint | null> {
   const c = await getCredits();
-  return c.data ? roundPool(BigInt(c.data.treasuryAtoms)) : null;
+  return c.data ? BigInt(c.data.treasuryAtoms) : null;
 }
 
-const toWhole = (atoms: bigint) => Number(atoms / 10n ** BigInt(CREDIT_DECIMALS));
+const asCredits = (atoms: bigint) => Number(atoms) / 10 ** CREDIT_DECIMALS;
 
-export async function pastRounds(deps: TournamentDeps = defaultDeps): Promise<{ past: PastRound[]; views: RoundView[] }> {
+/** The frozen records in order, and what the treasury has paid out so far. */
+export interface FinalsView {
+  past: PastRound[];
+  views: RoundView[];
+  /** One per finished round, oldest first; null while it can't be frozen yet (credits unreadable). */
+  finals: (FinalRound | null)[];
+  /** $CREDIT atoms the treasury paid across every frozen round. */
+  paidFromTreasury: bigint;
+}
+
+/**
+ * Every finished round's result, frozen the first time it is read after the round ends: the
+ * treasury it started from, its pool (60% of that, topped up by the dev to the floor), the exact
+ * rewards and who funds them. Frozen rounds never change again, even when the treasury, the
+ * Masters list or the rules change later. Rounds are frozen in order, because each one starts
+ * from what the earlier ones left in the treasury.
+ */
+export async function pastRounds(deps: TournamentDeps = defaultDeps): Promise<FinalsView> {
   const { current, rounds } = await startedRounds(deps);
-  const finished = rounds.filter((r) => r.times.number < current.number);
-  const pool = finished.length ? await poolAtoms() : null;
-  return { past: finished.map((r) => pastRoundOf(r.doc, r.times, pool === null ? null : toWhole(pool))), views: finished };
+  const finished = rounds.filter((r) => r.times.number < current.number).sort((a, b) => a.times.number - b.times.number);
+  const finals: (FinalRound | null)[] = [];
+  let paid = 0n;
+  let gross: bigint | null | undefined;
+  let tenders: StoredTender[] | null = null;
+  let masters: Master[] | null = null;
+  for (const v of finished) {
+    const kept = await readFinal(v.times.number);
+    if (kept) {
+      finals.push(kept);
+      paid += BigInt(kept.fromTreasuryAtoms);
+      continue;
+    }
+    // A later round can't be frozen before an earlier one.
+    if (finals.some((f) => f === null)) {
+      finals.push(null);
+      continue;
+    }
+    if (gross === undefined) gross = await (deps.grossTreasury ?? grossTreasury)().catch(() => null);
+    if (gross === null) {
+      finals.push(null);
+      continue;
+    }
+    tenders ??= (await readTenders()).tenders;
+    masters ??= await deps.masters().catch(() => [] as Master[]);
+    const treasury = gross > paid ? gross - paid : 0n;
+    const plan = roundPool(treasury);
+    const recentTop3 = finals
+      .filter((f): f is FinalRound => f !== null && f.round < v.times.number && f.round >= v.times.number - REWARDS.repeatWinner.rounds)
+      .flatMap((f) => (f.result.top ?? []).map((x) => x.id.replace(/^r\d+-/, "")));
+    const roundMasters: RoundMaster[] = masters.map((m) => ({ id: m.tokenAddress, agentId: m.orbioAgentId ?? "", ownerWallet: m.ownerWallet }));
+    const input = roundInput(v.doc, plan.pool, tenders, roundMasters, recentTop3);
+    const allocated = totalAllocated(computeRoundPayouts(input));
+    const funding = fundingOf(plan, allocated);
+    const result = pastRoundOf(v.doc, v.times, asCredits(plan.pool));
+    const final: FinalRound = {
+      round: v.times.number,
+      frozenAt: new Date(deps.now()).toISOString(),
+      treasuryAtoms: treasury.toString(),
+      shareAtoms: plan.share.toString(),
+      devTopUpAtoms: plan.devTopUp.toString(),
+      poolAtoms: plan.pool.toString(),
+      allocatedAtoms: allocated.toString(),
+      fromTreasuryAtoms: funding.fromTreasury.toString(),
+      fromDevAtoms: funding.fromDev.toString(),
+      input: { ...input, pool: input.pool.toString() },
+      result: {
+        ...result,
+        funding: { allocatedCredits: asCredits(allocated), fromTreasuryCredits: asCredits(funding.fromTreasury), fromDevCredits: asCredits(funding.fromDev) },
+      },
+    };
+    const stored = await freezeFinal(final);
+    finals.push(stored);
+    paid += BigInt(stored.fromTreasuryAtoms);
+  }
+  const past = finished.map((v, i) => finals[i]?.result ?? pastRoundOf(v.doc, v.times, null));
+  // Newest first, like the rest of the site.
+  return { past: past.reverse(), views: [...finished].reverse(), finals, paidFromTreasury: paid };
 }
 
-/** A wallet's ledger across finished rounds (displayed, not paid). */
+/** The treasury now (what earlier rounds left) and the running round's pool plan. null while credits are unknown. */
+export async function currentPool(deps: TournamentDeps = defaultDeps): Promise<PoolPlan | null> {
+  const [gross, { paidFromTreasury }] = await Promise.all([(deps.grossTreasury ?? grossTreasury)().catch(() => null), pastRounds(deps)]);
+  if (gross === null) return null;
+  return roundPool(gross > paidFromTreasury ? gross - paidFromTreasury : 0n);
+}
+
+/** A wallet's rewards across finished rounds, from each round's frozen record (paid by the dev after each round). */
 export async function ledger(wallet: Address, deps: TournamentDeps = defaultDeps): Promise<LedgerEntry[]> {
-  const { past, views } = await pastRounds(deps);
+  const { views, finals } = await pastRounds(deps);
   if (views.length === 0) return [];
-  const [pool, tenders, masters] = await Promise.all([poolAtoms(), readTenders(), deps.masters().catch(() => [] as Master[])]);
-  const roundMasters: RoundMaster[] = masters.map((m) => ({ id: m.tokenAddress, agentId: m.orbioAgentId ?? "", ownerWallet: m.ownerWallet }));
-  const owners = new Map(masters.map((m) => [m.tokenAddress as string, m.ownerWallet as string]));
+  const byRound = new Map(finals.filter((f): f is FinalRound => f !== null).map((f) => [f.round, f] as const));
   const entries: LedgerEntry[] = [];
-  for (const v of [...views].sort((a, b) => a.times.number - b.times.number)) {
-    const recentTop3 = past
-      .filter((p) => p.number < v.times.number && p.number >= v.times.number - REWARDS.repeatWinner.rounds)
-      // A pitch id is r<round>-<agentId>.
-      .flatMap((p) => (p.top ?? []).map((x) => x.id.replace(/^r\d+-/, "")));
-    const input = pool === null ? null : roundInput(v.doc, pool, tenders.tenders, roundMasters, recentTop3);
+  for (const v of views) {
+    const f = byRound.get(v.times.number);
+    const input = f ? { ...f.input, pool: BigInt(f.input.pool) } : null;
+    const owners = new Map((input?.masters ?? []).map((m) => [m.id as string, m.ownerWallet as string]));
     entries.push(...ledgerFor(wallet, v.doc, input, owners));
   }
   return entries.sort((a, b) => b.round - a.round);

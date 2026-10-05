@@ -11,19 +11,19 @@ describe("config checks", () => {
 
   it("REWARDS splits each sum to 100", () => {
     assert.equal(REWARDS.agentOpsPct + REWARDS.treasuryPct, 100);
-    assert.equal(Object.values(REWARDS.roundSplit).reduce((a, b) => a + b, 0), 100);
+    assert.equal((Object.values(REWARDS.roundSplit) as number[]).reduce((a, b) => a + b, 0), 100);
     assert.equal(REWARDS.pitchPlaces.reduce((a, b) => a + b, 0), 100);
   });
 
   it("flags a round split that does not sum to 100", () => {
-    const broken = { ...REWARDS, roundSplit: { pitchesPct: 35, votersPct: 10, mastersPct: 10, treasuryPct: 40 } };
+    const broken = { ...REWARDS, roundSplit: { pitchesPct: 35, votersPct: 10, mastersPct: 10, treasuryPct: 40 } } as unknown as typeof REWARDS;
     assert.ok(rewardsErrors(broken).some((e) => e.includes("roundSplit")));
   });
 
   it("flags broken 20/80, pitch places and out-of-range values", () => {
     assert.ok(rewardsErrors({ ...REWARDS, agentOpsPct: 25 }).some((e) => e.includes("agentOpsPct")));
     assert.ok(rewardsErrors({ ...REWARDS, pitchPlaces: [50, 30, 30] }).some((e) => e.includes("pitchPlaces")));
-    assert.ok(rewardsErrors({ ...REWARDS, roundPoolCapCredits: -1 }).length > 0);
+    assert.ok(rewardsErrors({ ...REWARDS, roundPoolFloorCredits: -1 }).length > 0);
     assert.ok(rewardsErrors({ ...REWARDS, repeatWinner: { rounds: 5, factor: 2 } }).length > 0);
   });
 });

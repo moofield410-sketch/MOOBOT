@@ -2,7 +2,7 @@ import { CACHE, REWARDS, USE_MOCK_DATA } from "@/config";
 import { cached } from "@/lib/cache";
 import { recordFieldFundTotal } from "@/lib/field-fund-history";
 import { getMooBot } from "@/lib/moobot";
-import { credits, receivedFrom, roundPool, splitReceived } from "@/lib/rewards";
+import { credits, receivedFrom, splitReceived } from "@/lib/rewards";
 import { SAMPLE_TOTAL_CREDITS } from "@/lib/sample/credits";
 import type { CreditStats, DataEnvelope, TreasuryState } from "@/lib/types";
 
@@ -60,23 +60,24 @@ export async function getCredits(): Promise<DataEnvelope<CreditStats>> {
 }
 
 /**
- * Treasury balance and this round's pool. While rewards are displayed (not paid), the treasury
- * is the 80% share of all $CREDIT received. Real mode needs a treasury ledger, so it is
- * "unavailable" until the MooBot agent exists.
+ * The treasury now and the running round's pool: the treasury is 80% of everything received,
+ * less what earlier (frozen) rounds paid out of it; the pool is 60% of that, topped up by the dev
+ * to the floor (lib/rewards.ts roundPool).
  */
 export async function getTreasury(): Promise<DataEnvelope<TreasuryState>> {
   const env = await getCredits();
   if (!env.data) return { data: null, source: "unavailable", updatedAt: env.updatedAt, stale: env.stale, error: env.error };
-  const treasury = BigInt(env.data.treasuryAtoms);
-  const pool = roundPool(treasury);
-  const share = (treasury * BigInt(REWARDS.roundPoolPctOfTreasury * 100)) / 10_000n;
+  // Loaded here, not at the top: the Tournament service reads credits too.
+  const { currentPool } = await import("@/lib/tournament/service");
+  const plan = await currentPool();
+  if (!plan) return { data: null, source: "unavailable", updatedAt: env.updatedAt, stale: env.stale, error: env.error };
   return {
     ...env,
     data: {
-      treasuryAtoms: treasury.toString(),
-      poolShareAtoms: share.toString(),
-      capAtoms: REWARDS.roundPoolCapCredits === null ? null : credits(REWARDS.roundPoolCapCredits).toString(),
-      poolAtoms: pool === null ? null : pool.toString(),
+      treasuryAtoms: plan.treasury.toString(),
+      poolShareAtoms: plan.share.toString(),
+      devTopUpAtoms: plan.devTopUp.toString(),
+      poolAtoms: plan.pool.toString(),
     },
   };
 }

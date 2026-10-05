@@ -24,9 +24,7 @@ export async function botFacts(now: number): Promise<string[]> {
     if (received !== null) facts.push(`CREDIT received by the ${SITE.ticker} agent so far (the Field Fund): ${formatCredits(received)}.`);
   }
   facts.push(
-    REWARDS.roundPoolCapCredits === null
-      ? "Tournament rewards: there is NO reward pool this round (the treasury is still small and the per-round pool isn't set): this round is for the win, the recap and the Masters' attention. Never promise rewards or quote a pool size. Later rounds' rewards will be shown on the site, not paid, until review."
-      : `Tournament rewards: shown on the site, not paid yet (payouts wait for review). A round pool is at most ${REWARDS.roundPoolCapCredits} CREDIT.`,
+    `Tournament rewards: each round's pool is ${REWARDS.roundPoolPctOfTreasury}% of the treasury (the rest rolls over), and the dev tops it up so every scored round pays at least ${REWARDS.roundPoolFloorCredits} CREDIT. The whole pool goes to the top ${REWARDS.pitchPlaces.length} pitches, the voters and the Masters who took part. The team pays the winners by hand after each round; the result is frozen when the round ends. A round needs at least ${REWARDS.minVoters} voters to pay out.`,
   );
   const spend = await readSpend(utcDay(now)).catch(() => null);
   if (spend) {

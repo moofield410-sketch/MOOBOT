@@ -52,4 +52,4 @@ Moofield will never DM you an address, ask you to "verify" a wallet, or ask for 
 
 ## Not financial advice
 
-Nothing on this site is financial advice, an offer or a promise of returns. Rewards are displayed, not paid, and are not guaranteed. Legal review comes before any real payout. Moofield is an independent community project, not affiliated with Orbio.
+Nothing on this site is financial advice, an offer or a promise of returns. Tournament rewards are paid in $CREDIT by the team, by hand, after each round; the site never sends anything, and nobody will ask you to sign or approve anything to receive them. Moofield is an independent community project, not affiliated with Orbio.

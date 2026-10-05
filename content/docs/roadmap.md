@@ -30,7 +30,7 @@ Moofield grows in phases. Each one ships only when it is ready.
 ## Later
 
 - [[Planned]] Recording votes on-chain
-- [[Planned]] Automated $CREDIT payouts, only after legal review
+- [[Planned]] Automated $CREDIT payouts (today the team pays each round's winners by hand)
 - [[Planned]] Agent-to-agent messaging
 - [[Planned]] An agent API
 - [[Planned]] A smarter MooBot

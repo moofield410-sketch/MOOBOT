@@ -36,13 +36,14 @@ const word = (n: number) => WORDS[n] ?? int(n);
 const fraction = (f: number) => (f === 0.5 ? "half" : `${Math.round(f * 100)}%`);
 
 /** The Rewards worked example: illustrative inputs, every output computed by lib/rewards.ts. */
-export const EXAMPLE = { receivedCredits: 10_000, treasuryCredits: 200_000, capCredits: 40_000, bigPower: 1_000, smallPower: 100, smallVoters: 9, masters: 5 };
+export const EXAMPLE = { receivedCredits: 10_000, treasuryCredits: 2_000, smallTreasuryCredits: 100, bigPower: 1_000, smallPower: 100, smallVoters: 9, masters: 5 };
 
 export function rewardsWorkedExample(r = REWARDS, ex = EXAMPLE): string {
   const received = splitReceived(credits(ex.receivedCredits), r);
-  const rc = { ...r, roundPoolCapCredits: ex.capCredits };
-  const share = (credits(ex.treasuryCredits) * BigInt(r.roundPoolPctOfTreasury * 100)) / 10_000n;
-  const pool = roundPool(credits(ex.treasuryCredits), rc)!;
+  const rc = r;
+  const plan = roundPool(credits(ex.treasuryCredits), rc);
+  const small = roundPool(credits(ex.smallTreasuryCredits), rc);
+  const pool = plan.pool;
 
   const wallet = (i: number) => `0x${(1_000 + i).toString(16).padStart(40, "0")}` as const;
   const pitch = (id: string, fighter: string, minute: number): RoundPitch => ({
@@ -72,7 +73,10 @@ export function rewardsWorkedExample(r = REWARDS, ex = EXAMPLE): string {
   const second = p.pitches.find((x) => x.place === 2)!;
   const secondRepeat = repeat.pitches.find((x) => x.place === 2)?.amount ?? 0n;
   const paidMasters = p.masters.length;
-  const sharedPool = share > pool ? `which is above the cap, so the round pool is **${whole(pool)} $CREDIT**` : `which is below the cap, so the round pool is **${whole(pool)} $CREDIT**`;
+  const sharedPool =
+    plan.devTopUp > 0n
+      ? `which is under the ${int(r.roundPoolFloorCredits)} $CREDIT floor, so the dev adds **${whole(plan.devTopUp)}** and the round pool is **${whole(pool)} $CREDIT**`
+      : `which is above the ${int(r.roundPoolFloorCredits)} $CREDIT floor, so that is the round pool: **${whole(pool)} $CREDIT**. The other ${whole(plan.treasury - plan.share)} rolls over to the next round`;
 
   return [
     `Say the MooBot agent receives **${int(ex.receivedCredits)} $CREDIT**:`,
@@ -80,7 +84,9 @@ export function rewardsWorkedExample(r = REWARDS, ex = EXAMPLE): string {
     `- Running the agent (${r.agentOpsPct}%, taken first): **${whole(received.agentOps)} $CREDIT**`,
     `- Into the treasury (${r.treasuryPct}%): **${whole(received.treasury)} $CREDIT**`,
     "",
-    `Later, the treasury holds **${int(ex.treasuryCredits)} $CREDIT** and the cap is **${int(ex.capCredits)} $CREDIT** (an example; the real cap isn't set yet). ${r.roundPoolPctOfTreasury}% of the treasury is **${whole(share)}**, ${sharedPool}.`,
+    `Later, the treasury holds **${int(ex.treasuryCredits)} $CREDIT**. ${r.roundPoolPctOfTreasury}% of it is **${whole(plan.share)}**, ${sharedPool}.`,
+    "",
+    `With a small treasury of **${int(ex.smallTreasuryCredits)} $CREDIT**, ${r.roundPoolPctOfTreasury}% is only **${whole(small.share)}**: the dev adds **${whole(small.devTopUp)}**, so the pool is still **${whole(small.pool)} $CREDIT**.`,
     "",
     "**Splitting the pool**",
     "",
@@ -89,7 +95,7 @@ export function rewardsWorkedExample(r = REWARDS, ex = EXAMPLE): string {
     `| Pitches | ${r.roundSplit.pitchesPct}% | ${whole(buckets.pitches)} |`,
     `| Voters | ${r.roundSplit.votersPct}% | ${whole(buckets.voters)} |`,
     `| Masters | ${r.roundSplit.mastersPct}% | ${whole(buckets.masters)} |`,
-    `| Stays in the treasury | ${r.roundSplit.treasuryPct}% | ${whole(kept)} |`,
+    ...(r.roundSplit.treasuryPct > 0 ? [`| Stays in the treasury | ${r.roundSplit.treasuryPct}% | ${whole(kept)} |`] : []),
     "",
     `**The top ${r.pitchPlaces.length} pitches** share ${whole(buckets.pitches)}: ${p.pitches.map((x) => `${["first", "second", "third"][x.place - 1] ?? `place ${x.place}`} **${whole(x.amount)}**`).join(", ")}. If the second-place agent had also placed in the top ${r.pitchPlaces.length} within the last ${r.repeatWinner.rounds} rounds, it would get **${whole(secondRepeat)}** and the other ${whole(second.amount - secondRepeat)} would stay in the treasury.`,
     "",
@@ -97,7 +103,7 @@ export function rewardsWorkedExample(r = REWARDS, ex = EXAMPLE): string {
     "",
     `**Masters.** ${word(ex.masters).replace(/^./, (c) => c.toUpperCase())} Masters took part, but one is the Fighter behind a top-${r.pitchPlaces.length} pitch, so the other ${word(paidMasters)} share the ${whole(buckets.masters)}: **${whole(p.masters[0].amount)}** each.`,
     "",
-    `Everything adds up: ${whole(buckets.pitches)} + ${whole(buckets.voters)} + ${whole(buckets.masters)} + ${whole(kept)} = ${whole(pool)}.`,
+    `Everything adds up: ${whole(buckets.pitches)} + ${whole(buckets.voters)} + ${whole(buckets.masters)}${kept > 0n ? ` + ${whole(kept)}` : ""} = ${whole(pool)} (anything a place or the Masters don't use stays in the treasury).`,
   ].join("\n");
 }
 
@@ -139,7 +145,8 @@ export function docVars(): Record<string, string> {
     AGENT_OPS_PCT: String(REWARDS.agentOpsPct),
     TREASURY_PCT: String(REWARDS.treasuryPct),
     POOL_PCT: String(REWARDS.roundPoolPctOfTreasury),
-    CAP: REWARDS.roundPoolCapCredits === null ? "not set yet" : `${int(REWARDS.roundPoolCapCredits)} $CREDIT`,
+    POOL_FLOOR: `${int(REWARDS.roundPoolFloorCredits)} $CREDIT`,
+    ROLLOVER_PCT: String(100 - REWARDS.roundPoolPctOfTreasury),
     SPLIT_PITCHES: String(REWARDS.roundSplit.pitchesPct),
     SPLIT_VOTERS: String(REWARDS.roundSplit.votersPct),
     SPLIT_MASTERS: String(REWARDS.roundSplit.mastersPct),
