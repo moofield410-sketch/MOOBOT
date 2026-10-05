@@ -65,6 +65,8 @@ export interface OrbioAgent {
 
 const str = (v: unknown) => (typeof v === "string" && v !== "" ? v : null);
 const obj = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : null);
+/** A whole-number amount as Orbio sends it ("12743540491566"). Anything else is no value: these reach BigInt(), which throws on "1.5e21". */
+const atoms = (v: unknown) => (typeof v === "string" && /^\d{1,78}$/.test(v) ? v : null);
 const addr = (v: unknown) => (typeof v === "string" && isAddress(v) ? (v.toLowerCase() as Address) : null);
 
 /** Validates one agent record. Returns null for records missing required fields. */
@@ -93,14 +95,14 @@ export function parseAgent(raw: unknown): OrbioAgent | null {
     description: str(r.description),
     twitter: str(obj(r.socials)?.twitter),
     price: price
-      ? { source: str(price.source), graduated: typeof price.graduated === "boolean" ? price.graduated : null, priceMicroUsd: str(price.priceMicroUsd), marketCapMicroUsd: str(price.marketCapMicroUsd) }
+      ? { source: str(price.source), graduated: typeof price.graduated === "boolean" ? price.graduated : null, priceMicroUsd: atoms(price.priceMicroUsd), marketCapMicroUsd: atoms(price.marketCapMicroUsd) }
       : null,
     curve: curve
       ? { graduated: typeof curve.graduated === "boolean" ? curve.graduated : null, progressBps: typeof curve.progressBps === "number" ? curve.progressBps : null }
       : null,
-    credit: credit ? { mintedAtoms: str(credit.mintedAtoms), owedAtoms: str(credit.owedAtoms), claimedAtoms: str(credit.claimedAtoms) } : null,
-    stake: stake ? { stakedWei: str(stake.stakedWei), claimedFeesWei: str(stake.claimedFeesWei), protocolFeeWei: str(stake.protocolFeeWei) } : null,
-    converted: converted ? { usdgAtoms: str(converted.usdgAtoms) } : null,
+    credit: credit ? { mintedAtoms: atoms(credit.mintedAtoms), owedAtoms: atoms(credit.owedAtoms), claimedAtoms: atoms(credit.claimedAtoms) } : null,
+    stake: stake ? { stakedWei: atoms(stake.stakedWei), claimedFeesWei: atoms(stake.claimedFeesWei), protocolFeeWei: atoms(stake.protocolFeeWei) } : null,
+    converted: converted ? { usdgAtoms: atoms(converted.usdgAtoms) } : null,
   };
 }
 

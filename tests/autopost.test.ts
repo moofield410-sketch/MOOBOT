@@ -90,7 +90,10 @@ describe("Auto-post drafts", () => {
     const d = roundResultDraft({ number: 1, winnerTitle: "Grab $SCAM at scam.xyz @all #now", winnerFighter: "Holder Bot", votesCast: 42 }, next);
     checkDraft(d);
     assert.equal(d.key, "round-result:1");
-    assert.match(d.text, /^🏆 Round 1 champion: "Grab SCAM at all now" by Holder Bot, after 42 votes from the Crowd./);
+    assert.match(d.text, /^🏆 Round 1 champion: "Grab SCAM at all now" by Holder Bot, from 42 votes cast by the Crowd./);
+    // With the board, the champion's own votes, never the round's total credited to it.
+    const own = roundResultDraft({ number: 1, winnerTitle: "Digest", winnerFighter: "Errand", winnerPitchId: "r1-7", votesCast: 42, top: [{ id: "r1-7", votes: 30 }] }, next);
+    assert.match(own.text, /by Errand, with 30 of 42 votes from the Crowd\./);
     assert.match(roundResultDraft({ number: 1, winnerTitle: "Daily holder digest", winnerFighter: "Errand", votesCast: 2 }, next).text, /"Daily holder digest" by Errand/);
     assert.match(d.text, /Round 2 is open now, until 11 Oct, 12:00 UTC/);
     const none = roundResultDraft({ number: 1, winnerTitle: null, winnerFighter: null, votesCast: 1 }, next);

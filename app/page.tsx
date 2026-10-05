@@ -68,7 +68,7 @@ const FAQ: FaqItem[] = [
   { q: "Can this site move my funds?", a: "Never. It doesn't send transactions or ask for token approvals. Sign-in uses a free signed message." },
   {
     q: "When does voting open?",
-    a: `With Round 1, when the Tournament unlocks ${UNLOCK}. Each vote is a free signed message: no gas, nothing leaves your wallet.`,
+    a: `In every round, from the Tournament's unlock (${UNLOCK}) on. Each vote is a free signed message: no gas, nothing leaves your wallet.`,
   },
   { q: "Who can vote?", a: `Wallets holding at least the voting minimum (currently ${VOTING.minOrbio.toLocaleString("en-US")} $ORBIO, configurable) at the round's snapshot block.` },
   { q: "Does tapping MooBot do anything?", a: "He flexes. That's all: it's just for fun and never gives anything of value." },
@@ -282,7 +282,7 @@ export default async function HomePage() {
                 {topPitches.map((p) => (
                   <li key={p.id} className="card-hover flex flex-wrap items-center gap-4 rounded-xl border border-line bg-wash p-4">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong font-mono text-sm font-semibold text-grass">
-                      {p.rank}
+                      {p.votingPower > 0 ? p.rank : "–"}
                     </span>
                     <MasterAvatar m={{ name: p.fighter, ticker: p.ticker ?? "", logoUrl: p.logoUrl ?? null }} size="sm" />
                     <div className="min-w-0 flex-1">

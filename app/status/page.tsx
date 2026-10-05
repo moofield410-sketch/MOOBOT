@@ -118,6 +118,20 @@ export default async function StatusPage() {
             <StatRow label="Connection" value={<StatusPill tone={s.rpc.status === "ok" ? "good" : s.rpc.status === "down" ? "warn" : "off"}>{s.rpc.status === "ok" ? "Healthy" : s.rpc.status === "down" ? "Unavailable" : s.mode === "mock" ? "Preview" : "Not connected yet"}</StatusPill>} />
             <StatRow label="Response time" value={s.rpc.latencyMs !== null ? `${s.rpc.latencyMs} ms` : "n/a"} />
             <StatRow label="Latest block" value={formatInt(s.rpc.headBlock)} />
+            {s.rpc.status === "ok" && (
+              <StatRow
+                label="Old balances"
+                value={
+                  s.rpc.archive === true ? (
+                    <StatusPill tone="good">Kept: votes read directly</StatusPill>
+                  ) : s.rpc.archive === false ? (
+                    <StatusPill tone="warn">Not kept: votes rebuilt from transfers (use an archive RPC)</StatusPill>
+                  ) : (
+                    "n/a"
+                  )
+                }
+              />
+            )}
           </dl>
         </Card>
         {s.orbio ? (

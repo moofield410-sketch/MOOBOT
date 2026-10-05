@@ -25,7 +25,7 @@ export async function botFacts(now: number): Promise<string[]> {
   }
   facts.push(
     REWARDS.roundPoolCapCredits === null
-      ? "Tournament rewards: shown on the site, not paid yet (payouts wait for review). The round pool size is not set yet, so never quote a pool size."
+      ? "Tournament rewards: there is NO reward pool this round (the treasury is still small and the per-round pool isn't set): this round is for the win, the recap and the Masters' attention. Never promise rewards or quote a pool size. Later rounds' rewards will be shown on the site, not paid, until review."
       : `Tournament rewards: shown on the site, not paid yet (payouts wait for review). A round pool is at most ${REWARDS.roundPoolCapCredits} CREDIT.`,
   );
   const spend = await readSpend(utcDay(now)).catch(() => null);

@@ -7,6 +7,7 @@ import { LaunchAnnouncement } from "@/components/moobot/LaunchAnnouncement";
 import { PointerEffects } from "@/components/motion/PointerEffects";
 import { PREVIEW_BANNER_SCRIPT, PreviewBanner } from "@/components/PreviewBanner";
 import { Providers } from "@/components/Providers";
+import { RoundWatcher } from "@/components/RoundWatcher";
 import { ScheduleProvider } from "@/components/ScheduleProvider";
 import { SITE, USE_MOCK_DATA } from "@/config";
 import { REVEAL_SCRIPT } from "@/lib/motion-scripts";
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Footer />
             <MooBotGuide />
             <PointerEffects />
+            <RoundWatcher />
           </ScheduleProvider>
         </Providers>
       </body>

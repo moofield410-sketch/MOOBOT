@@ -64,7 +64,8 @@ export function missingConfirmItems(): string[] {
   if (CHAIN.explorerUrl === null) missing.push("CHAIN.explorerUrl");
   if (!process.env[CHAIN.rpcUrlEnv]) missing.push(`${CHAIN.rpcUrlEnv} (env)`);
   if (!process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID) missing.push("NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID (env)");
-  if (!process.env.SESSION_SECRET) missing.push("SESSION_SECRET (env)");
+  // Under 32 characters sign-in stays off (lib/auth/session.ts), so a short one counts as missing.
+  if ((process.env.SESSION_SECRET?.trim().length ?? 0) < 32) missing.push("SESSION_SECRET (env, at least 32 characters)");
   if (CONTRACTS.launchpad.length === 0) missing.push("CONTRACTS.launchpad (not published by Orbio)");
   if (!process.env[MOOBOT_TOKEN.env]?.trim()) missing.push(`${MOOBOT_TOKEN.env} (env, set on launch day)`);
   if (REWARDS.roundPoolCapCredits === null) missing.push("REWARDS.roundPoolCapCredits");

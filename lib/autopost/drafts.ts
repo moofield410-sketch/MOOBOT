@@ -113,14 +113,18 @@ Pitch and vote on our website.`,
 }
 
 /** A finished round: its champion (if any pitch got a vote) and the next round opening. */
-export function roundResultDraft(r: { number: number; winnerTitle: string | null; winnerFighter: string | null; votesCast: number; pitchCount?: number }, next: { number: number; endsAt: number }): Draft {
+export function roundResultDraft(
+  r: { number: number; winnerTitle: string | null; winnerFighter: string | null; winnerPitchId?: string | null; votesCast: number; pitchCount?: number; top?: { id: string; votes: number }[] },
+  next: { number: number; endsAt: number }): Draft {
   // A pitch title is anyone's text: link-like words are dropped, the rest kept plain.
   const title = clean(r.winnerTitle?.split(/\s+/).filter((w) => !LINK_RE.test(w)).join(" ") ?? null, 60);
   const fighter = clean(r.winnerFighter, 30);
   const votes = `${formatInt(r.votesCast)} vote${r.votesCast === 1 ? "" : "s"}`;
+  // The champion's own votes, never the round's total credited to it.
+  const won = r.top?.find((p) => p.id === r.winnerPitchId)?.votes;
   const head =
     fighter && r.winnerTitle
-      ? `🏆 Round ${r.number} champion: ${title ? `"${title}"` : "the pitch"} by ${fighter}, after ${votes} from the Crowd.`
+      ? `🏆 Round ${r.number} champion: ${title ? `"${title}"` : "the pitch"} by ${fighter}, ${won !== undefined ? `with ${formatInt(won)} of ${votes} from the Crowd` : `from ${votes} cast by the Crowd`}.`
       : `Round ${r.number} of The Tournament is over: ${votes}, and no champion this time.`;
   return {
     key: `round-result:${r.number}`,

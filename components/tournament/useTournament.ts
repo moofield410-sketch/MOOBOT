@@ -3,9 +3,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import { useAccount, useSignMessage } from "wagmi";
+import { useAccount, useSignMessage, useSwitchChain } from "wagmi";
 import { useSchedule } from "@/components/ScheduleProvider";
 import { CHAIN } from "@/config";
+import { onRobinhoodChain } from "@/components/wallet/useSession";
 import type { RoundState } from "@/lib/rounds";
 import { buildAction, type ActionFields, type ActionKind } from "@/lib/tournament/messages";
 import type { LedgerEntry } from "@/lib/tournament/results";
@@ -49,8 +50,9 @@ export function useTournamentMe() {
  * checked by the server word for word. Signing is free: no gas, no transaction, no approval.
  */
 export function useSignedAction<K extends ActionKind>(kind: K) {
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const { mutateAsync: switchChain } = useSwitchChain();
   const { now, timeline } = useSchedule();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -67,12 +69,21 @@ export function useSignedAction<K extends ActionKind>(kind: K) {
         // The server clock, so a wrong device clock can't make the signature look expired.
         const issuedAt = new Date(timeline ? now : Date.now()).toISOString();
         const message = buildAction({ kind, address: address.toLowerCase() as Address, chainId: CHAIN.id, round, fields, issuedAt });
+        await onRobinhoodChain(chainId, switchChain);
         const signature = await signMessageAsync({ message });
-        const res = await fetch(`/api/tournament/${kind}`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ message, signature }),
-        });
+        // A busy moment (503: many people acting at once) is retried with the same signature, which
+        // stays valid for minutes, so nobody has to sign twice.
+        let res: Response | null = null;
+        for (let attempt = 0; attempt < 4; attempt++) {
+          if (attempt) await new Promise((r) => setTimeout(r, 800 * attempt + Math.random() * 700));
+          res = await fetch(`/api/tournament/${kind}`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ message, signature }),
+          });
+          if (res.status !== 503) break;
+        }
+        if (!res) throw new Error("Something went wrong. Please try again.");
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         if (!res.ok) throw new Error(body.error ?? `Something went wrong (${res.status}). Please try again.`);
         setDone(true);
@@ -87,7 +98,7 @@ export function useSignedAction<K extends ActionKind>(kind: K) {
         setBusy(false);
       }
     },
-    [address, kind, now, timeline, signMessageAsync, queryClient, router],
+    [address, chainId, switchChain, kind, now, timeline, signMessageAsync, queryClient, router],
   );
 
   return { send, busy, error, done, reset: () => (setDone(false), setError(null)) };

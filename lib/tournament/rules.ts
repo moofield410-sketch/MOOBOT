@@ -43,6 +43,9 @@ const BLOCKED: [RegExp, string][] = [
 
 /** null when the text is fine; otherwise the reason it can't be posted. Links belong in the demo field only. */
 export function textProblem(text: string): string | null {
+  // Direction overrides and invisible characters can make a pitch read differently in a wallet
+  // prompt than on the site. (Joiners inside emoji are fine.)
+  if (/[‪-‮⁦-⁩​‎‏⁠﻿]/.test(text)) return "Please remove invisible or text-direction characters.";
   if (LINK_RE.test(text)) return "Please leave links out of the text: put one demo link in the Demo field instead.";
   for (const [re, why] of BLOCKED) if (re.test(text)) return why;
   return null;
@@ -143,8 +146,10 @@ export function applyTender(doc: TendersDoc, t: StoredTender, now: number): Tend
   const deadline = Date.parse(t.deadline);
   const day = 86_400_000;
   if (!Number.isFinite(deadline)) refuse("The deadline isn't a valid date.");
-  if (deadline < now + c.minDays * day - 60_000) refuse(`The deadline must be at least ${c.minDays} day ahead.`);
-  if (deadline > now + c.maxDays * day + 60_000) refuse(`The deadline can be at most ${c.maxDays} days ahead.`);
+  // The form rounds the deadline up to a whole hour (so up to 59 minutes past maxDays), and signing
+  // takes a few minutes: allow for both, so every choice the form offers is accepted.
+  if (deadline < now + c.minDays * day - 10 * 60_000) refuse(`The deadline must be at least ${c.minDays} day ahead.`);
+  if (deadline > now + c.maxDays * day + 70 * 60_000) refuse(`The deadline can be at most ${c.maxDays} days ahead.`);
   const open = doc.tenders.filter((x) => same(x.masterToken, t.masterToken) && Date.parse(x.deadline) > now);
   if (open.length >= c.openPerMaster) refuse(`${t.masterName} already has ${c.openPerMaster} open tenders.`, 409);
   if (doc.tenders.some((x) => x.id === t.id)) refuse("That tender was already posted.", 409);

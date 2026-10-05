@@ -5,7 +5,9 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 
-const ROOTS = ["app", "components", "lib", "config.ts", "netlify"];
+const ROOTS = ["app", "components", "lib", "config.ts", "netlify", "scripts"];
+/** This check itself (it lists the patterns), and test tooling that signs only with throwaway keys it generates. */
+const SKIP = new Set(["scripts/check-readonly.mjs", "scripts/e2e-tournament.mjs"]);
 const EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs"]);
 
 const FORBIDDEN = [
@@ -22,6 +24,16 @@ const FORBIDDEN = [
   /functionName:\s*["'](approve|transfer|transferFrom|permit|setApprovalForAll)["']/,
   /eth_send(Raw)?Transaction/,
   /eth_signTransaction/,
+  // Typed-data signatures (Permit, Permit2) can move tokens without a transaction.
+  /\bsignTypedData\b/,
+  /\buseSignTypedData\b/,
+  /eth_signTypedData/,
+  /\beth_sign\b/,
+  // Batched calls (EIP-5792) are transactions too.
+  /\bsendCalls\b/,
+  /\buseSendCalls\b/,
+  /wallet_sendCalls/,
+  /\buseWriteContracts\b/,
 ];
 
 function* walk(path) {
@@ -37,6 +49,7 @@ function* walk(path) {
 const hits = [];
 for (const root of ROOTS) {
   for (const file of walk(root)) {
+    if (SKIP.has(relative(".", file).replaceAll("\\", "/"))) continue;
     readFileSync(file, "utf8").split(/\r?\n/).forEach((line, i) => {
       for (const re of FORBIDDEN) {
         if (re.test(line)) hits.push(`${relative(".", file)}:${i + 1}  ${line.trim()}`);

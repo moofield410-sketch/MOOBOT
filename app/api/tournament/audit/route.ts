@@ -23,7 +23,8 @@ export async function GET(req: Request) {
       scores: doc.scores,
       hidden: doc.hidden.map((h) => ({ ...h, removedVotes: h.removedVotes.length })),
       tenders: tenders.tenders.filter((t) => t.round === round),
-      howToCheck: "Each message was signed with personal_sign (EIP-191). Recover the signer from message + signature and compare it with the address in the message.",
+      howToCheck:
+        "Each message was signed with personal_sign (EIP-191). For a normal wallet, recover the signer from message + signature and compare it with the address in the message. A smart-contract wallet (Coinbase Smart Wallet, Safe) can't be recovered that way: check it on Robinhood Chain (chain 4663) with ERC-1271 / ERC-6492, e.g. viem's publicClient.verifyMessage({ address, message, signature }).",
     },
     { headers: { "Cache-Control": "no-store" } },
   );

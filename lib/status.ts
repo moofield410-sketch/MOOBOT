@@ -5,7 +5,29 @@ import { errorMessage } from "@/lib/monitoring";
 import { getReader } from "@/lib/sources";
 import { orbioFetchState } from "@/lib/sources/orbio-api";
 import type { SystemStatus } from "@/lib/types";
-import { CHAIN } from "@/config";
+import { erc20Abi } from "viem";
+import { CHAIN, CONTRACTS } from "@/config";
+import { publicClientOrNull } from "@/lib/sources/chain";
+
+/** About three days of Robinhood Chain blocks (~100 ms each): a whole Tournament round. */
+const ROUND_OF_BLOCKS = 2_600_000n;
+
+/**
+ * Whether the RPC still answers a balance from a round ago. With an archive node every vote's
+ * power is read directly at the snapshot block; without one it's rebuilt from transfer logs,
+ * which gets slow late in a round. One cheap read.
+ */
+async function keepsOldState(head: bigint): Promise<boolean | null> {
+  const client = publicClientOrNull();
+  const token = CONTRACTS.orbioToken;
+  if (!client || !token || head <= ROUND_OF_BLOCKS) return null;
+  try {
+    await client.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [token], blockNumber: head - ROUND_OF_BLOCKS });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function getStatus(): Promise<SystemStatus> {
   const reader = getReader();
@@ -20,7 +42,7 @@ export async function getStatus(): Promise<SystemStatus> {
     const t0 = Date.now();
     try {
       const head = await reader.headBlock();
-      rpc = { status: "ok", latencyMs: Date.now() - t0, headBlock: head.toString() };
+      rpc = { status: "ok", latencyMs: Date.now() - t0, headBlock: head.toString(), archive: await keepsOldState(head) };
     } catch (err) {
       rpc = { status: "down", latencyMs: null, headBlock: null, error: errorMessage(err) };
     }

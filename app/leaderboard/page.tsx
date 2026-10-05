@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MasterAvatar } from "@/components/MasterCard";
-import { NoVotesYet } from "@/components/tournament/EmptyStates";
+import { NoPitchesYet } from "@/components/tournament/EmptyStates";
 import { Card, PageHeader } from "@/components/ui/Card";
 import { LockGate } from "@/components/ui/LockGate";
-import { FULL_UNLOCK_AFTER_H, USE_MOCK_DATA } from "@/config";
-import { formatCompact, shortAddress } from "@/lib/format";
+import { FULL_UNLOCK_AFTER_H, USE_MOCK_DATA, VOTING } from "@/config";
+import { formatCompact, formatInt, shortAddress } from "@/lib/format";
 import { getMasters } from "@/lib/registry";
 import { getLeaderboard } from "@/lib/tournament";
 
@@ -69,9 +69,10 @@ export default async function LeaderboardPage() {
                   </thead>
                   <tbody>
                     {board.data.pitches.map((p) => (
-                      <tr key={p.id} className={`border-b border-line transition-colors last:border-b-0 hover:bg-wash ${p.rank <= 3 ? `rank-${p.rank}` : ""}`}>
+                      <tr key={p.id} className={`border-b border-line transition-colors last:border-b-0 hover:bg-wash ${p.votingPower > 0 && p.rank <= 3 ? `rank-${p.rank}` : ""}`}>
                         <td className={td}>
-                          <Rank n={p.rank} />
+                          {/* No votes yet means no place yet: pitches aren't ranked by when they arrived. */}
+                          {p.votingPower > 0 ? <Rank n={p.rank} /> : <span className="text-soil/50" aria-label="Not ranked yet">–</span>}
                         </td>
                         <td className={td}>
                           <div className="flex items-center gap-3">
@@ -94,6 +95,9 @@ export default async function LeaderboardPage() {
             </Card>
 
             <Card title="Top voters">
+              {board.data.voters.length === 0 ? (
+                <p className="text-sm text-soil/80">No votes yet. Holders of {formatInt(VOTING.minOrbio)}+ $ORBIO at the snapshot can vote on any pitch; the first ones show up here.</p>
+              ) : (
               <div className="-mx-3 overflow-x-auto">
                 <table className="w-full min-w-[22rem] text-sm">
                   <thead>
@@ -118,10 +122,11 @@ export default async function LeaderboardPage() {
                   </tbody>
                 </table>
               </div>
+              )}
             </Card>
           </div>
         ) : (
-          <NoVotesYet />
+          <NoPitchesYet />
         )}
       </LockGate>
     </div>

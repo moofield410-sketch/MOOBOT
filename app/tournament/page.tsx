@@ -6,7 +6,7 @@ import { PitchForm } from "@/components/tournament/PitchForm";
 import { RoundCountdown } from "@/components/tournament/RoundCountdown";
 import { TenderCard } from "@/components/tournament/TenderCard";
 import { TenderForm } from "@/components/tournament/TenderForm";
-import { PageHeader, StaleNotice } from "@/components/ui/Card";
+import { EmptyState, PageHeader, StaleNotice } from "@/components/ui/Card";
 import { DetailRow, Details } from "@/components/ui/Details";
 import { LockGate } from "@/components/ui/LockGate";
 import { NotAvailable } from "@/components/ui/NotAvailable";
@@ -51,8 +51,13 @@ export default async function TournamentPage() {
               </li>
             ))}
           </ul>
-        ) : (
+        ) : t ? (
           <NoPitchesYet />
+        ) : (
+          // The board couldn't be read at all: never pretend it's empty.
+          <EmptyState title="The board couldn't load right now">
+            <p>Pitches and votes are safe; this page just couldn&apos;t read them. Please reload in a moment.</p>
+          </EmptyState>
         ),
     },
     {
@@ -189,7 +194,7 @@ export default async function TournamentPage() {
                     </>
                   ) : (
                     <>
-                      Taken at the round start ({formatUtcDateTime(t!.round.startsAt)}); the block number appears with the first vote. Hold at least{" "}
+                      Taken at the round start ({formatUtcDateTime(t!.round.startsAt)}); the block number appears once the first wallet checks its voting power. Hold at least{" "}
                       {VOTING.minOrbio.toLocaleString("en-US")} $ORBIO at that moment to vote.
                     </>
                   )}

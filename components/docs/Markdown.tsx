@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { OpensChip } from "@/components/docs/OpensChip";
 import { slugify } from "@/lib/docs";
 
 function text(children: React.ReactNode): string {
@@ -30,6 +31,7 @@ const components: Components = {
     const t = text(children);
     if (!t.startsWith("status:")) return <code>{children}</code>;
     const label = t.slice("status:".length);
+    if (label.startsWith("Opens")) return <OpensChip label={label} />;
     const tone = label === "Live" ? "border-wheat text-wheat" : label === "Planned" ? "border-line-strong text-soil/80" : "border-grass text-grass";
     return <span className={`chip mr-1.5 align-middle text-[11px] font-semibold not-italic ${tone}`}>{label}</span>;
   },

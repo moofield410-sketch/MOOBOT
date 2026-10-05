@@ -21,7 +21,7 @@ import {
   type TournamentDeps,
 } from "@/lib/tournament/service";
 import { balanceAtSnapshot, findSnapshotBlock, type SnapshotChain } from "@/lib/tournament/snapshot";
-import { readRound } from "@/lib/tournament/store";
+import { readPower, readRound } from "@/lib/tournament/store";
 import { emptyRound, type StoredPitch, type StoredVote } from "@/lib/tournament/types";
 import type { Address, Master } from "@/lib/types";
 
@@ -520,5 +520,87 @@ describe("round results", () => {
     assert.equal(empty.winnerTitle, null);
     const hidden = applyHide(d, "2", "0x09" as Address, "spam", "");
     assert.equal(pastRoundOf(hidden, { number: 1, startsAt: UNLOCK, endsAt: UNLOCK + ROUND_MS }, null).winnerPitchId, "1");
+  });
+});
+
+describe("Audit fixes (5 Oct 2026)", () => {
+  it("never changes a finished round: no hide after its end", async () => {
+    const s = setup();
+    const at = s.deps.now();
+    const p = await submitPitch(s.deps, ...(await signed(s.fighter, "pitch", pitchFields("101"), { at })));
+    await castVote(s.deps, ...(await signed(s.voters[0], "vote", { Pitch: p.id }, { at })));
+    s.mods.push(lc(s.voters[4]));
+    s.setNow(UNLOCK + ROUND_MS + 60_000);
+    await rejects(hidePitch(s.deps, lc(s.voters[4]), p.id, "Changed my mind"), 409, /has ended/);
+    assert.equal((await readRound(1)).votes.length, 1);
+  });
+
+  it("refuses a vote whose request runs past the round's end, instead of using the next round's snapshot", async () => {
+    const s = setup();
+    const at = s.deps.now();
+    const p = await submitPitch(s.deps, ...(await signed(s.fighter, "pitch", pitchFields("101"), { at })));
+    // The round ends while the voter's power is being read from the chain.
+    s.setNow(UNLOCK + ROUND_MS - 30_000);
+    const late = s.deps.now();
+    const slow: SnapshotChain = {
+      ...s.fc.chain,
+      async balanceAt(token, owner, block) {
+        s.setNow(UNLOCK + ROUND_MS + 1_000);
+        return s.fc.chain.balanceAt(token, owner, block);
+      },
+    };
+    await rejects(castVote({ ...s.deps, chain: () => slow }, ...(await signed(s.voters[1], "vote", { Pitch: p.id }, { at: late }))), 409, /has ended/);
+    assert.equal((await readRound(1)).votes.length, 0, "nothing landed in the finished round");
+  });
+
+  it("refuses the same signed tender posted twice (it's public in the audit log)", async () => {
+    const s = setup();
+    const at = s.deps.now();
+    const sig = await signed(s.masterOwner, "tender", {
+      Master: s.masters[0].tokenAddress,
+      Title: "Weekly holder report",
+      Description: "We need a small feature that tells holders what changed this week.",
+      "Looking for": "Fast",
+      Deadline: new Date(at + 3 * 86_400_000).toISOString(),
+    }, { at });
+    await postTender(s.deps, ...sig);
+    await rejects(postTender(s.deps, ...sig), 409, /already posted/);
+  });
+
+  it("accepts the longest tender deadline the form offers (rounded up to the hour)", async () => {
+    const s = setup();
+    const at = s.deps.now();
+    const hour = 3_600_000;
+    const deadline = new Date(Math.ceil((at + TOURNAMENT.tender.maxDays * 86_400_000) / hour) * hour + hour - 60_000);
+    await postTender(s.deps, ...(await signed(s.masterOwner, "tender", {
+      Master: s.masters[0].tokenAddress,
+      Title: "Two-week request",
+      Description: "We need a small feature that tells holders what changed this week.",
+      "Looking for": "Fast",
+      Deadline: deadline.toISOString(),
+    }, { at })));
+  });
+
+  it("only fixes the snapshot once a later second exists", async () => {
+    const fc = fakeChain();
+    fc.setHead(UNLOCK);
+    assert.equal(await findSnapshotBlock(fc.chain, UNLOCK), null, "head is still in the round-start second");
+    fc.setHead(UNLOCK + 2_000);
+    assert.notEqual(await findSnapshotBlock(fc.chain, UNLOCK), null);
+  });
+
+  it("keeps a zero voting power out of storage", async () => {
+    const s = setup();
+    const r = await powerFor(s.deps, "0x4444444444444444444444444444444444444444" as Address);
+    assert.equal(r.power, 0);
+    assert.equal(await readPower(1, "0x4444444444444444444444444444444444444444" as Address), null);
+    assert.equal((await powerFor(s.deps, "0x4444444444444444444444444444444444444444" as Address)).power, 0, "still answered, from memory");
+  });
+
+  it("never stores a wrong 0 when the rebuilt balance comes out negative", async () => {
+    const fc = fakeChain({ prunedBelow: 3_900_000n });
+    fc.setHead(UNLOCK + 72 * 3_600_000);
+    const broken: SnapshotChain = { ...fc.chain, transferSum: async (_t, _o, dir) => (dir === "in" ? 5n * E18 : 0n) };
+    await assert.rejects(balanceAtSnapshot(broken, ORBIO, "0x2222222222222222222222222222222222222222" as Address, 2_000_000n), /negative/);
   });
 });

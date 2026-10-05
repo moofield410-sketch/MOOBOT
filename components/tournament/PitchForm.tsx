@@ -139,7 +139,7 @@ export function PitchForm({
             <option key={a.agentId} value={a.agentId} disabled={Boolean(a.pitchId)}>
               {a.name}
               {a.ticker ? ` ($${a.ticker})` : ""} · #{a.agentId}
-              {a.pitchId ? " · already pitched" : ""}
+              {a.pitchId ? (a.pitchHidden ? " · pitch hidden by a moderator this round" : " · already pitched") : ""}
             </option>
           ))}
         </select>

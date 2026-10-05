@@ -26,6 +26,8 @@ Voting power grows with your balance, but slowly, so that a few very large walle
 
 {{VOTING_POWER_TABLE}}
 
+**The honest catch.** Because power grows slower than the balance, the same $ORBIO split across many wallets counts for more than in one wallet: {{SPLIT_EXAMPLE}} Moofield has no way to tell that many wallets belong to one person, so the square root protects small holders from one big wallet, not from someone who splits their tokens before the snapshot. Every vote, with its wallet and power, is in the round's public [audit log](/api/tournament/audit), so anyone can look for that pattern.
+
 ## How to vote
 
 1. Open the [Tournament](/tournament) board and connect your wallet.

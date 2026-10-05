@@ -202,7 +202,14 @@ export interface OwnedAgent {
 
 export interface SystemStatus {
   mode: "mock" | "live";
-  rpc: { status: "ok" | "down" | "not-configured" | "mock"; latencyMs: number | null; headBlock: string | null; error?: string };
+  rpc: {
+    status: "ok" | "down" | "not-configured" | "mock";
+    latencyMs: number | null;
+    headBlock: string | null;
+    error?: string;
+    /** Whether the node still answers balances from days ago (an archive node): then votes are read directly. null = unknown. */
+    archive?: boolean | null;
+  };
   indexer: { lastScannedBlock: string | null; lagBlocks: string | null; lastScanAt: string | null; lastScanError: string | null };
   orbio: { lastFetchAt: string | null; agentsTotal: number | null; graduated: number | null; hiddenMismatches: number; lastError: string | null } | null;
   /** The $MOOBOT launch switch (lib/moobot.ts). */

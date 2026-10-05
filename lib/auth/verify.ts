@@ -17,12 +17,13 @@ export async function verifySignIn(message: string, signature: string, now = Dat
   if (!fields) return { ok: false, reason: "Message is not a valid Moofield sign-in" };
   if (!/^0x[0-9a-fA-F]+$/.test(signature)) return { ok: false, reason: "Invalid signature format" };
 
-  const nonce = await consumeNonce(fields.nonce, fields.address, fields.issuedAt, now);
-  if (!nonce.ok) return nonce;
-
+  // The signature first, then the nonce: a wrong signature must not write anything to storage.
   const client = publicClientOrNull();
   const valid = client
     ? await client.verifyMessage({ address: fields.address, message, signature: signature as Hex })
     : await verifyMessage({ address: fields.address, message, signature: signature as Hex });
-  return valid ? { ok: true, address: fields.address } : { ok: false, reason: "Signature does not match the address" };
+  if (!valid) return { ok: false, reason: "Signature does not match the address" };
+
+  const nonce = await consumeNonce(fields.nonce, fields.address, fields.issuedAt, now);
+  return nonce.ok ? { ok: true, address: fields.address } : nonce;
 }

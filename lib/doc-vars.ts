@@ -108,6 +108,20 @@ export function votingPowerTable(): string {
   return ["| Snapshot balance | Voting power |", "|---|---|", ...VOTING_TABLE_BALANCES.map((b) => `| ${int(b)} $ORBIO | ${int(votingPower(b))} |`)].join("\n");
 }
 
+/**
+ * The honest catch of a power curve that grows slower than the balance: the same $ORBIO split
+ * across many wallets of the minimum counts for more than in one wallet. Worked out from the
+ * live voting model, so the Docs always show the real numbers.
+ */
+function splitExample(): string {
+  const whole = VOTING.minOrbio * 1_000;
+  const one = votingPower(whole);
+  const wallets = whole / VOTING.minOrbio;
+  const split = wallets * votingPower(VOTING.minOrbio);
+  if (split <= one) return "Splitting the same $ORBIO across more wallets doesn't add voting power under the current model.";
+  return `${int(whole)} $ORBIO in one wallet is ${int(one)} voting power, but split into ${int(wallets)} wallets of ${int(VOTING.minOrbio)} it is ${int(split)}.`;
+}
+
 export function docVars(): Record<string, string> {
   const t = buildTimeline(Date.parse(AGENT_LIVE_AT), FULL_UNLOCK_AFTER_H);
   const roundMs = TOURNAMENT.roundLengthH * 3_600_000;
@@ -154,6 +168,7 @@ export function docVars(): Record<string, string> {
     X_HANDLE: SOCIAL.xHandle,
     AURA_TIERS: HOLDER_AURA_TIERS.map((a) => `${a.name} (${int(a.minMooBot)}+)`).join(", "),
     REWARDS_WORKED_EXAMPLE: rewardsWorkedExample(),
+    SPLIT_EXAMPLE: splitExample(),
     ORBIO_DOCS: ORBIO_LINKS.docs,
     ORBIO_TERMS: ORBIO_LINKS.liveTerms,
   };

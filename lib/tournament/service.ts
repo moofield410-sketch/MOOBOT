@@ -106,10 +106,23 @@ export function liveRound(deps: TournamentDeps): RoundState {
   return r;
 }
 
+/**
+ * Refuses a write that would land after its round ended. Checked inside each compare-and-swap, so
+ * a request that started in time but finishes late (a slow chain read) can't change a finished round.
+ */
+function stillOpen(deps: TournamentDeps, round: RoundState): void {
+  if (deps.now() >= round.endsAt) refuse(`Round ${round.number} has ended. Please reload: Round ${round.number + 1} is open now.`, 409);
+}
+
 /** Parses and checks a signed action: format, freshness, the live round, and the signature. */
 async function signed<K extends ActionKind>(deps: TournamentDeps, kind: K, message: unknown, signature: unknown) {
   if (typeof message !== "string" || typeof signature !== "string" || message.length > 3_000 || !/^0x[0-9a-fA-F]{130,}$/.test(signature)) {
     refuse("Invalid request.");
+  }
+  // In production, never accept an action that would only live in one server's memory (lost on
+  // the next restart, invisible to other servers): that only happens if Netlify Blobs is missing.
+  if (kvMode() === "memory" && process.env.NODE_ENV === "production" && process.env.MOOFIELD_LOCAL_TEST !== "1") {
+    refuse("The Tournament's storage isn't reachable right now, so nothing can be saved. Please try again in a few minutes.", 503);
   }
   const action = parseAction(kind, message as string);
   if (!action) return refuse("This isn't a valid Moofield message. Please sign again from the site.");
@@ -135,10 +148,14 @@ export async function ensureSnapshot(deps: TournamentDeps, round: RoundState): P
   return updateRound(round.number, (d) => (d.snapshot ? { doc: d, result: d.snapshot } : { doc: { ...d, snapshot }, result: snapshot }));
 }
 
-/** A wallet's voting power for the live round: read once at the snapshot block, then kept. */
-export async function powerFor(deps: TournamentDeps, wallet: Address): Promise<PowerRecord> {
-  const round = liveRound(deps);
-  const kept = await readPower(round.number, wallet);
+/**
+ * A wallet's voting power for a round (the live one unless given): read once at the snapshot
+ * block, then kept. A vote passes its own round, so a request that runs past the round's end
+ * can never read the next round's snapshot.
+ */
+export async function powerFor(deps: TournamentDeps, wallet: Address, forRound?: RoundState): Promise<PowerRecord> {
+  const round = forRound ?? liveRound(deps);
+  const kept = (await readPower(round.number, wallet)) ?? zeroPower.get(`${round.number}:${wallet.toLowerCase()}`) ?? null;
   if (kept) return kept;
   const chain = deps.chain();
   if (!chain || !deps.orbioToken) return refuse("Voting power can't be read right now: the blockchain connection isn't set up.", 503);
@@ -157,8 +174,24 @@ export async function powerFor(deps: TournamentDeps, wallet: Address): Promise<P
     method: b.method,
     readAt: new Date(deps.now()).toISOString(),
   };
-  await writePower(record);
+  // A balance at the snapshot block never changes, so a zero is final. Zeros stay in this
+  // instance's memory instead of storage: anyone can ask about random wallets, and those
+  // shouldn't fill the store.
+  if (power > 0) await writePower(record);
+  else rememberZero(record);
   return record;
+}
+
+const g = globalThis as unknown as { __moofieldZeroPower?: Map<string, PowerRecord> };
+const zeroPower = (g.__moofieldZeroPower ??= new Map());
+function rememberZero(r: PowerRecord): void {
+  zeroPower.set(`${r.round}:${r.wallet}`, r);
+  if (zeroPower.size > 50_000) for (const k of [...zeroPower.keys()].slice(0, 10_000)) zeroPower.delete(k);
+}
+
+/** Whether a wallet's power for a round is already known (no chain read needed to answer). */
+export async function powerKnown(round: number, wallet: Address): Promise<boolean> {
+  return zeroPower.has(`${round}:${wallet.toLowerCase()}`) || (await readPower(round, wallet)) !== null;
 }
 
 // --- Signed actions --------------------------------------------------------------------------
@@ -203,7 +236,10 @@ export async function submitPitch(deps: TournamentDeps, message: unknown, signat
     message: msg,
     signature: sig,
   };
-  return updateRound(round.number, (doc) => ({ doc: applyPitch(doc, pitch, tenders, deps.now()), result: pitch }));
+  return updateRound(round.number, (doc) => {
+    stillOpen(deps, round);
+    return { doc: applyPitch(doc, pitch, tenders, deps.now()), result: pitch };
+  });
 }
 
 export async function castVote(deps: TournamentDeps, message: unknown, signature: unknown): Promise<StoredVote> {
@@ -211,7 +247,7 @@ export async function castVote(deps: TournamentDeps, message: unknown, signature
   // Cheap checks first, so nobody waits for a chain read only to be refused.
   const before = await readRound(round.number);
   applyVote(before, { round: round.number, wallet: action.address, pitchId: action.fields.Pitch, power: 1, balance: 0, castAt: "", message: msg, signature: sig });
-  const power = await powerFor(deps, action.address);
+  const power = await powerFor(deps, action.address, round);
   if (power.power <= 0) refuse(`This wallet held ${power.balance.toLocaleString("en-US")} $ORBIO at the snapshot block, under the voting minimum.`, 403);
   const vote: StoredVote = {
     round: round.number,
@@ -223,7 +259,10 @@ export async function castVote(deps: TournamentDeps, message: unknown, signature
     message: msg,
     signature: sig,
   };
-  return updateRound(round.number, (doc) => ({ doc: applyVote(doc, vote), result: vote }));
+  return updateRound(round.number, (doc) => {
+    stillOpen(deps, round);
+    return { doc: applyVote(doc, vote), result: vote };
+  });
 }
 
 /** The Master a wallet acts for: the signer must be its owner or agent wallet. */
@@ -251,7 +290,10 @@ export async function submitScore(deps: TournamentDeps, message: unknown, signat
     message: msg,
     signature: sig,
   };
-  return updateRound(round.number, (doc) => ({ doc: applyScore(doc, score), result: score }));
+  return updateRound(round.number, (doc) => {
+    stillOpen(deps, round);
+    return { doc: applyScore(doc, score), result: score };
+  });
 }
 
 export async function postTender(deps: TournamentDeps, message: unknown, signature: unknown): Promise<StoredTender> {
@@ -263,6 +305,9 @@ export async function postTender(deps: TournamentDeps, message: unknown, signatu
   checkTenderText(t);
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(f.Deadline)) refuse("The deadline isn't a valid date.");
   return updateTenders((doc) => {
+    stillOpen(deps, round);
+    // A signature is public once posted (the audit log): the same signed tender can't be posted twice.
+    if (doc.tenders.some((x) => x.signature.toLowerCase() === sig.toLowerCase())) refuse("This tender is already posted.", 409);
     const tender: StoredTender = {
       id: nextTenderId(doc, round.number, { agentId: m.orbioAgentId, token: m.tokenAddress }),
       round: round.number,
@@ -280,16 +325,24 @@ export async function postTender(deps: TournamentDeps, message: unknown, signatu
   });
 }
 
-/** Moderators only (MODERATOR_WALLETS), signed in. Works on any round. */
+/**
+ * Moderators only (MODERATOR_WALLETS), signed in, and only in the live round: a finished round's
+ * result can never be changed after the fact.
+ */
 export async function hidePitch(deps: TournamentDeps, by: Address | null, pitchId: unknown, reason: unknown): Promise<{ pitchId: string }> {
   if (!by) return refuse("Sign in with your wallet first.", 401);
   if (!deps.moderators().some((w) => same(w, by))) refuse("Only Moofield moderators can hide pitches.", 403);
   const id = typeof pitchId === "string" ? pitchId : "";
   const n = Number(id.match(/^r(\d{1,5})-/)?.[1]);
   if (!Number.isInteger(n) || n < 1) refuse("Unknown pitch.", 404);
+  const live = liveRound(deps);
+  if (n !== live.number) refuse(`Round ${n} has ended: its result can't be changed.`, 409);
   const why = typeof reason === "string" ? oneLine(reason).slice(0, 200) : "";
   if (why.length < 3) refuse("Please give a short reason.");
-  return updateRound(n, (doc) => ({ doc: applyHide(doc, id, by.toLowerCase() as Address, why, new Date(deps.now()).toISOString()), result: { pitchId: id } }));
+  return updateRound(n, (doc) => {
+    stillOpen(deps, live);
+    return { doc: applyHide(doc, id, by.toLowerCase() as Address, why, new Date(deps.now()).toISOString()), result: { pitchId: id } };
+  });
 }
 
 // --- Reading -----------------------------------------------------------------------------------

@@ -36,7 +36,10 @@ function naReason(b: TokenBalance | undefined): string {
 function balanceText(b: TokenBalance | undefined): React.ReactNode {
   if (b?.status === "not-launched") return <span className="text-lg text-soil/80">{MOOBOT_NOT_LAUNCHED}</span>;
   if (!b || b.status !== "ok" || b.formatted === null) return <NotAvailable reason={naReason(b)} />;
-  return Number(b.formatted).toLocaleString("en-US", { maximumFractionDigits: 2 });
+  const n = Number(b.formatted);
+  // A real amount under a cent never reads as 0.
+  if (n > 0 && n < 0.01) return "<0.01";
+  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
 /** Holder aura: cosmetic only. Needs a verified $MOOBOT contract and a readable balance. */
@@ -102,7 +105,7 @@ export function WalletDashboard({ preview }: { preview: boolean }) {
             </a>
           )}
           {chainId !== undefined && chainId !== CHAIN.id && (
-            <span className="text-soil/75">Your wallet is on another network. That&apos;s fine: balances are read from {CHAIN.name}.</span>
+            <span className="text-soil/75">Your wallet is on another network. Balances are read from {CHAIN.name} either way; when you sign, your wallet is asked to switch to it (smart wallets need that).</span>
           )}
         </div>
         <div className="mt-5 border-t border-line pt-4">

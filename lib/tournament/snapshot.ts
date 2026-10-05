@@ -29,8 +29,10 @@ export async function findSnapshotBlock(chain: SnapshotChain, atMs: number): Pro
   const at = Math.floor(atMs / 1000);
   const head = await chain.headBlock();
   const headTime = await chain.blockTime(head);
-  if (headTime < at) return null;
-  if (headTime === at) return head;
+  // Several blocks can share one timestamp (about 100 ms blocks): the snapshot is only fixed once a
+  // later second exists, so it is exactly "the last block with timestamp <= the round start" and
+  // anyone can re-check it.
+  if (headTime <= at) return null;
 
   const sample = head > 100_000n ? head - 100_000n : 0n;
   const sampleTime = await chain.blockTime(sample);
@@ -65,23 +67,35 @@ export async function findSnapshotBlock(chain: SnapshotChain, atMs: number): Pro
   return lo;
 }
 
-/** Sums Transfer values over [from, to], halving the range when the node refuses a big one. */
+/**
+ * Sums Transfer values over [from, to]. It asks for the whole range first; when the node refuses,
+ * it halves the range, and after each success it doubles it again, so one refusal (or a passing
+ * error) doesn't make the rest of a long scan crawl. Gives up after too many refusals in a row.
+ */
 async function transferSumChunked(chain: SnapshotChain, token: Address, owner: Address, dir: "in" | "out", from: bigint, to: bigint): Promise<bigint> {
+  const whole = to - from + 1n;
   let total = 0n;
-  let span = to - from + 1n;
+  let span = whole;
   let start = from;
+  let refusals = 0;
   while (start <= to) {
     const end = start + span - 1n > to ? to : start + span - 1n;
     try {
       total += await chain.transferSum(token, owner, dir, start, end);
       start = end + 1n;
+      refusals = 0;
+      span = span * 2n > whole ? whole : span * 2n;
     } catch (err) {
-      if (span <= 2_000n) throw err;
+      if (span <= 500n || ++refusals > 12) throw err;
       span /= 2n;
     }
   }
   return total;
 }
+
+/** Errors that mean "this node doesn't keep state that old", the only reason to rebuild from transfers. */
+const PRUNED = /missing trie node|state (is )?not available|historical state|pruned|header not found|unknown block|archive|state.*(unavailable|too old)|block.*not found/i;
+const messageOf = (err: unknown) => (err instanceof Error ? `${err.message} ${(err as { details?: string }).details ?? ""}` : String(err));
 
 export interface SnapshotBalance {
   raw: bigint;
@@ -92,10 +106,14 @@ export interface SnapshotBalance {
 /** A wallet's $ORBIO at the snapshot block: read directly, or rebuilt from today's balance minus transfers since. */
 export async function balanceAtSnapshot(chain: SnapshotChain, token: Address, owner: Address, snapshot: bigint): Promise<SnapshotBalance> {
   const decimals = await chain.decimals(token);
-  try {
-    return { raw: await chain.balanceAt(token, owner, snapshot), decimals, method: "direct" };
-  } catch {
-    // The node no longer keeps state that old: rebuild it.
+  // Read directly at the snapshot block. A node that says it doesn't keep state that old goes
+  // straight to the rebuild; any other error (a timeout, a rate limit) gets a second try first.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return { raw: await chain.balanceAt(token, owner, snapshot), decimals, method: "direct" };
+    } catch (err) {
+      if (PRUNED.test(messageOf(err))) break;
+    }
   }
   const now = await chain.headBlock();
   const today = await chain.balanceAt(token, owner, now);
@@ -105,7 +123,9 @@ export async function balanceAtSnapshot(chain: SnapshotChain, token: Address, ow
     transferSumChunked(chain, token, owner, "out", snapshot + 1n, now),
   ]);
   const raw = today - received + sent;
-  return { raw: raw < 0n ? 0n : raw, decimals, method: "transfers" };
+  // Impossible unless logs were missing: never store a wrong 0 for the whole round.
+  if (raw < 0n) throw new Error("The rebuilt balance came out negative (the node returned incomplete logs). Please try again.");
+  return { raw, decimals, method: "transfers" };
 }
 
 /** Whole tokens (rounded down) and the voting power they give. */

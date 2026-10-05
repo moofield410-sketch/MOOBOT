@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MasterAvatar } from "@/components/MasterCard";
-import { formatDate } from "@/lib/format";
+import { formatUtcDateTime } from "@/lib/format";
 import type { Tender } from "@/lib/types";
 
 export function TenderCard({ t, masterName, masterLogo = null, masterTicker = "" }: { t: Tender; masterName: string | null; masterLogo?: string | null; masterTicker?: string }) {
@@ -34,7 +34,7 @@ export function TenderCard({ t, masterName, masterLogo = null, masterTicker = ""
       <dl className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4 text-sm">
         <div>
           <dt className="text-xs text-soil/60">{open ? "Deadline" : "Closed on"}</dt>
-          <dd className="font-mono font-medium tabular-nums text-soil">{formatDate(t.deadline)}</dd>
+          <dd className="font-mono font-medium tabular-nums text-soil">{formatUtcDateTime(t.deadline)}</dd>
         </div>
         <div>
           <dt className="text-xs text-soil/60">Bid pitches</dt>

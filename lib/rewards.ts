@@ -223,8 +223,11 @@ export function computeRoundPayouts(input: RoundInput, r: RewardsConfig = REWARD
   });
 
   // Masters: equal split among Masters taking part, excluding any Master behind a top-3 pitch.
-  const top3Fighters = new Set(ranked.slice(0, r.pitchPlaces.length).filter((p) => p.power > 0).map((p) => p.fighter));
-  const masters = mastersTakingPart(input, r).filter((m) => !top3Fighters.has(m.agentId));
+  const top3 = ranked.slice(0, r.pitchPlaces.length).filter((p) => p.power > 0);
+  const top3Fighters = new Set(top3.map((p) => p.fighter));
+  const top3Owners = new Set(top3.map((p) => p.fighterOwner.toLowerCase()));
+  // Excluded too when the same owner runs a top-3 Fighter: no paying a Master for its owner's own win.
+  const masters = mastersTakingPart(input, r).filter((m) => !top3Fighters.has(m.agentId) && !top3Owners.has(m.ownerWallet.toLowerCase()));
   if (masters.length === 0) {
     skipped.push({ kind: "master", id: "masters", amount: buckets.mastersPct, reason: "No Master took part" });
     toTreasury += buckets.mastersPct;

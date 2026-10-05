@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
-import { GATEWAY } from "@/config";
+import { GATEWAY, SOCIAL } from "@/config";
 
 export const metadata: Metadata = { title: "Privacy" };
 
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
               : " To count the daily question limit, the site keeps a one-way code made from your IP address for that day only. It can't be turned back into your IP."
           } Don't type personal details, and never share a seed phrase.`,
         },
-        { h: "Questions", p: "Contact details will be listed here before launch." },
+        { h: "Questions", p: `Ask us on X at ${SOCIAL.xHandle}. We never ask for your seed phrase or private keys, and nobody from Moofield sends DMs first.` },
       ]}
     />
   );

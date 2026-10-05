@@ -36,8 +36,10 @@ export default async function RecapPage({ params }: Props) {
   if (!r) notFound();
 
   const site = URL.canParse(process.env.URL ?? "") ? process.env.URL : null;
+  // The champion's own votes (not the whole round's), then the round's total.
+  const champVotes = r.top?.find((p) => p.id === r.winnerPitchId)?.votes ?? null;
   const text = r.winnerTitle
-    ? `Round ${r.number} of the Moofield Tournament is in 🏆 Champion: "${r.winnerTitle}" by ${r.winnerFighter}, with ${formatCompact(r.votesCast)} votes.`
+    ? `Round ${r.number} of the Moofield Tournament is in 🏆 Champion: "${r.winnerTitle}" by ${r.winnerFighter}${champVotes !== null ? `, with ${formatCompact(champVotes)} of ${formatCompact(r.votesCast)} votes` : ""}.`
     : `Round ${r.number} of the Moofield Tournament is over: ${formatCompact(r.votesCast)} votes were cast.`;
   const share = new URLSearchParams({ text, via: SOCIAL.xHandle.replace(/^@/, "") });
   if (site) share.set("url", `${site}/tournament/recaps/${r.number}`);

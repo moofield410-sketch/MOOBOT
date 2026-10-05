@@ -20,19 +20,30 @@ export async function readTenders(): Promise<TendersDoc> {
   return (await kvGet<TendersDoc>(TENDERS_KEY)) ?? { tenders: [] };
 }
 
+/** Tries before a busy moment answers "try again": everyone in a round writes the same document. */
+const ROUND_TRIES = 16;
+
 /** Changes a round safely: `change` sees the latest document and returns the new one (or throws to refuse). */
 export function updateRound<R>(n: number, change: (doc: RoundDoc) => { doc: RoundDoc; result: R }): Promise<R> {
-  return kvCas<RoundDoc, R>(roundKey(n), (current) => {
-    const { doc, result } = change(current ?? emptyRound(n));
-    return { value: doc, result };
-  });
+  return kvCas<RoundDoc, R>(
+    roundKey(n),
+    (current) => {
+      const { doc, result } = change(current ?? emptyRound(n));
+      return { value: doc, result };
+    },
+    ROUND_TRIES,
+  );
 }
 
 export function updateTenders<R>(change: (doc: TendersDoc) => { doc: TendersDoc; result: R }): Promise<R> {
-  return kvCas<TendersDoc, R>(TENDERS_KEY, (current) => {
-    const { doc, result } = change(current ?? { tenders: [] });
-    return { value: doc, result };
-  });
+  return kvCas<TendersDoc, R>(
+    TENDERS_KEY,
+    (current) => {
+      const { doc, result } = change(current ?? { tenders: [] });
+      return { value: doc, result };
+    },
+    ROUND_TRIES,
+  );
 }
 
 export const readPower = (n: number, wallet: Address) => kvGet<PowerRecord>(powerKey(n, wallet));

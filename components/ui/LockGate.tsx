@@ -2,9 +2,9 @@
 
 import { useSchedule } from "@/components/ScheduleProvider";
 import { LockIcon } from "@/components/ui/Icons";
-import { USE_MOCK_DATA } from "@/config";
+import { AGENT_LIVE_AT, FULL_UNLOCK_AFTER_H, USE_MOCK_DATA } from "@/config";
 import { formatHms, formatUtcDateTime } from "@/lib/format";
-import type { Features, Timeline } from "@/lib/schedule";
+import { buildTimeline, type Features, type Timeline } from "@/lib/schedule";
 
 type GateFeature = Extract<keyof Features, "registrationOpen" | "votingOpen" | "rewardsLedgerOpen">;
 
@@ -14,6 +14,11 @@ const UNLOCK_AT: Record<GateFeature, keyof Timeline> = {
   votingOpen: "fullUnlockAt",
   rewardsLedgerOpen: "fullUnlockAt",
 };
+
+/** The published schedule, used only until the server clock has answered. */
+const PUBLISHED = buildTimeline(Date.parse(AGENT_LIVE_AT), FULL_UNLOCK_AFTER_H);
+/** Before the sync, only well past the unlock counts as open, so a slightly wrong clock can't open it early. */
+const PRE_SYNC_MARGIN_MS = 60_000;
 
 /**
  * Shows children once `feature` is unlocked by the server-clock schedule.
@@ -35,8 +40,10 @@ export function LockGate({
   children: React.ReactNode;
   minHeight?: string;
 }) {
-  const { synced, schedule, timeline, now } = useSchedule();
-  const unlocked = synced && schedule?.features[feature];
+  const { synced, schedule, timeline, now, error } = useSchedule();
+  // Once open, the content is in the page from the first render (and the server's HTML), instead
+  // of waiting for the clock sync; before the unlock, the synced server clock decides.
+  const unlocked = synced ? schedule?.features[feature] : Date.now() >= PUBLISHED[UNLOCK_AT[feature]] + PRE_SYNC_MARGIN_MS;
   if (unlocked) return <>{children}</>;
 
   const unlockAt = timeline ? timeline[UNLOCK_AT[feature]] : null;
@@ -52,6 +59,8 @@ export function LockGate({
           </p>
           <p className="mt-1 text-sm text-soil/70">{formatUtcDateTime(unlockAt)}</p>
         </>
+      ) : error ? (
+        <p className="text-sm text-soil/70">The server clock couldn&apos;t be reached. Please reload the page.</p>
       ) : (
         <p className="text-sm text-soil/70">Checking the server clock…</p>
       )}

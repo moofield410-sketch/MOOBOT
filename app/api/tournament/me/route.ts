@@ -5,7 +5,8 @@ import { errorMessage } from "@/lib/monitoring";
 import { logoPath } from "@/lib/safe-url";
 import { currentRound } from "@/lib/rounds";
 import { TournamentError } from "@/lib/tournament/rules";
-import { defaultDeps, ledger, powerFor } from "@/lib/tournament/service";
+import { allow, clientIp } from "@/lib/rate-limit";
+import { defaultDeps, ledger, powerFor, powerKnown } from "@/lib/tournament/service";
 import { readRound } from "@/lib/tournament/store";
 import type { Address } from "@/lib/types";
 
@@ -13,6 +14,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const same = (a: string | null | undefined, b: string) => Boolean(a && a.toLowerCase() === b);
+
+/** Fresh voting-power reads (chain reads) one connection may trigger per window. */
+const FRESH_POWER_READS = 12;
+const FRESH_POWER_WINDOW_MS = 10 * 60_000;
 
 /**
  * What one wallet can do in the running round: its voting power at the snapshot block, its vote,
@@ -39,9 +44,17 @@ export async function GET(req: Request) {
   };
 
   const live = round.status === "live";
+  // A first power read costs chain reads; a known one costs nothing. Fresh reads are limited per
+  // connection (a voter needs one or two), unless the wallet is signed in as itself.
+  const fresh = live && !(await powerKnown(round.number, address));
+  const tooMany = fresh && !same(session, address) && !allow(`power:${clientIp(req)}`, FRESH_POWER_READS, FRESH_POWER_WINDOW_MS);
   const [doc, power, agents, masters, entries] = await Promise.all([
     live ? readRound(round.number) : Promise.resolve(null),
-    live ? settle(powerFor(deps, address)) : Promise.resolve({ value: null, error: null }),
+    !live
+      ? Promise.resolve({ value: null, error: null })
+      : tooMany
+        ? Promise.resolve({ value: null, error: "Too many wallets checked from your connection. Please wait a few minutes and reload." })
+        : settle(powerFor(deps, address)),
     settle(deps.agentsOf(address)),
     settle(deps.masters()),
     settle(ledger(address, deps)),
