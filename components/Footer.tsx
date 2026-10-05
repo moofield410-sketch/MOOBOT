@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DISCLAIMER, SITE, SOCIAL } from "@/config";
 import { MooBotMascot } from "@/components/MooBotMascot";
 import { OfficialMooBotCard } from "@/components/moobot/OfficialMooBotCard";
-import { DiscordIcon, TelegramIcon, XIcon } from "@/components/ui/Icons";
+import { DiscordIcon, GitHubIcon, TelegramIcon, XIcon } from "@/components/ui/Icons";
 
 const EXPLORE = [
   { href: "/masters", label: "Masters" },
@@ -61,7 +61,13 @@ export function Footer() {
         </div>
 
         <FooterLinks title="Explore" links={EXPLORE} />
-        <FooterLinks title="Project" links={PROJECT} />
+        <div>
+          <FooterLinks title="Project" links={PROJECT} />
+          {/* The repo is public: anyone can read the code behind the site. */}
+          <a href={SOCIAL.github} target="_blank" rel="noopener noreferrer" className="tap inline-flex items-center gap-2 text-sm text-fern no-underline transition-colors hover:text-moss pointer-fine:mt-2">
+            <GitHubIcon /> Source code
+          </a>
+        </div>
 
         <div>
           <p className="mb-3 text-sm font-semibold text-soil">Community</p>

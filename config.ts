@@ -30,6 +30,8 @@ export const SOCIAL = {
   telegram: null as string | null,
   /** CONFIRM */
   discord: null as string | null,
+  /** The public source repo, linked in the footer so anyone can check the code. */
+  github: "https://github.com/moofield410-sketch/MOOBOT",
 } as const;
 
 /** Orbio's own account, credited wherever the Docs mention Orbio. */
